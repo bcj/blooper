@@ -168,10 +168,10 @@ class Part:
     """
 
     time: TimeSignature
-    key: Key
     tempo: int
     dynamic: Dynamic
     measures: list[list[Union[Note, Rest]]]
+    key: Optional[Key] = None
     # dict key is 0-indexed measure number
     time_changes: Optional[dict[int, TimeSignature]] = None
     # outer key is 0-indexed measure number, inner key is measure offset:

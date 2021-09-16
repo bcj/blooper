@@ -44,13 +44,12 @@ def test_synthesizer():
     from blooper.dynamics import AttackDecaySustainRelease, DynamicRange, Homogenous
     from blooper.instruments import Synthesizer
     from blooper.notes import Accent, Dynamic, Note, Rest
-    from blooper.parts import Key, Part, Tempo, TimeSignature
+    from blooper.parts import Part, Tempo, TimeSignature
     from blooper.pitch import Pitch, Tuning
 
     tuning = Tuning(Pitch(0, "A"), 10)
     part = Part(
         TimeSignature(4, 4),
-        Key.new("C", True),
         Tempo.ALLEGRO_MODERATO,
         Dynamic.from_name("fortissimo"),
         [
@@ -250,7 +249,6 @@ def test_synthesizer():
 
     part = Part(
         TimeSignature(2, 4),
-        Key.new("C", True),
         Tempo.ALLEGRO_MODERATO,
         Dynamic.from_name("fortissimo"),
         [

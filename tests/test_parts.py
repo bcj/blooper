@@ -154,9 +154,7 @@ def test_part_adjust_duration():
     # this would be a classmethod but we want to make it easy to change
     # tailoff factor. As such, we can just pass garbage for all this.
     # Maybe there's some bigger lesson about this class. hmm.
-    part = Part(
-        TimeSignature(4, 4), Key.new("A", True), 120, Dynamic.from_symbol("mf"), []
-    )
+    part = Part(TimeSignature(4, 4), 120, Dynamic.from_symbol("mf"), [])
 
     half_note = Fraction(1, 2)
     quarter_note = Fraction(1, 4)
@@ -251,10 +249,10 @@ def test_part_adjust_duration():
     # different drop-off
     part = Part(
         TimeSignature(4, 4),
-        Key.new("A", True),
         120,
         Dynamic.from_symbol("mf"),
         [],
+        Key.new("A", True),
         _tailoff_factor=Fraction(3, 16),
     )
     assert part.adjust_duration(Note(half_note, pitch), quarter_note) == Note(
@@ -270,7 +268,6 @@ def test_part_adjust_duration():
     # 0 drop off
     part = Part(
         TimeSignature(4, 4),
-        Key.new("A", True),
         120,
         Dynamic.from_symbol("mf"),
         [],
@@ -304,7 +301,6 @@ def test_part():
     # Accent.ACCENT became not full-length. We do have one Accent.ACCENT
     part = Part(
         common_time,
-        KEYS["C Major"],
         120,
         forte,
         [
@@ -346,6 +342,7 @@ def test_part():
                 Note(Fraction(1, 8), Pitch(3, "A"), accent=Accent.TENUTO),
             ],
         ],
+        KEYS["C Major"],
         time_changes={2: waltz_time, 3: common_time},
         tempo_changes={
             # tempo change twice in one held note
@@ -381,7 +378,6 @@ def test_part():
     # make sure it works right first
     part = Part(
         common_time,
-        KEYS["C Major"],
         120,
         forte,
         [
@@ -411,7 +407,6 @@ def test_part():
     # don't change tempo within a note
     part = Part(
         common_time,
-        KEYS["C Major"],
         120,
         forte,
         [
@@ -432,7 +427,6 @@ def test_part():
     # don't change dynamic within a note
     part = Part(
         common_time,
-        KEYS["C Major"],
         120,
         forte,
         [
@@ -454,7 +448,6 @@ def test_part():
     # make sure it works
     part = Part(
         common_time,
-        KEYS["C Major"],
         120,
         forte,
         [
@@ -479,7 +472,6 @@ def test_part():
     # can't staccato a long note
     part = Part(
         common_time,
-        KEYS["C Major"],
         120,
         forte,
         [
@@ -501,7 +493,6 @@ def test_part():
     # can't slur into a rest
     part = Part(
         common_time,
-        KEYS["C Major"],
         120,
         forte,
         [
@@ -523,7 +514,6 @@ def test_part():
     # can't staccato after a slur
     part = Part(
         common_time,
-        KEYS["C Major"],
         120,
         forte,
         [
@@ -546,7 +536,6 @@ def test_part():
     # can't slur off the end of the piece
     part = Part(
         common_time,
-        KEYS["C Major"],
         120,
         forte,
         [
