@@ -164,7 +164,7 @@ class Part:
     time signatures, dynamics, and their changes required to play those
     measures.
 
-    NOTE: Polyphony is not currently supported.
+    NOTE: Polyphony is not currently supported on a per-part basis.
     """
 
     time: TimeSignature

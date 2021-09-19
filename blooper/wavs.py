@@ -5,8 +5,7 @@ Writing samples to WAV files
 import struct
 from pathlib import Path
 
-from blooper.instruments import Instrument
-from blooper.parts import Part
+from blooper.mixers import Mixer
 
 FILE_HEADER = "<4sI4s"
 CHUNK_HEADER = "<4sI"
@@ -18,14 +17,13 @@ FORMAT_TAG = 1  # No compression
 BITS_PER_SAMPLE = 32
 
 
+# TODO: Are most compositions going to be a single instrument and part?
+#       If so, you should make an alternate function that takes those
+#       and calls this.
 # TODO: Would be nice to pull some of the logic out of this for testing.
-# Specifically:
-#  * are we handling too-loud noises correctly?
-#  * are we creating a valid header?
 def record(
     path: Path,
-    instrument: Instrument,
-    part: Part,
+    mixer: Mixer,
     *,
     channels: int = 2,
     sample_rate: int = SAMPLES_PER_SECOND,
@@ -35,7 +33,7 @@ def record(
     Write a WAV file by having a single instrument play a part
     """
     sample_format = SAMPLES[bits_per_sample]
-    min_value, max_value = wave_range(bits_per_sample)
+    max_value = (2 ** bits_per_sample) - 1
 
     block_align = channels * bits_per_sample // 8
     bytes_per_second = sample_rate * block_align
@@ -61,16 +59,11 @@ def record(
         stream.seek(struct.calcsize(CHUNK_HEADER), 1)
 
         samples = 0
-        for sample_set in instrument.play(part, sample_rate, channels=channels):
+        for sample_set in mixer.mix(sample_rate, channels, max_value):
             samples += 1
 
             for sample in sample_set:
-                stream.write(
-                    struct.pack(
-                        sample_format,
-                        int(min(max(sample * max_value, min_value), max_value)),
-                    )
-                )
+                stream.write(struct.pack(sample_format, sample))
 
         data_size = samples * block_align
         data_header = struct.pack(CHUNK_HEADER, b"data", data_size)
@@ -85,17 +78,6 @@ def record(
         stream.write(file_header)
         stream.seek(data_header_byte)
         stream.write(data_header)
-
-
-def wave_range(bits_per_sample: int) -> tuple[int, int]:
-    """
-    Get the minimum and maximum values for the sound wave
-    """
-    wave_range = (2 ** bits_per_sample) - 1
-    max_value = wave_range // 2
-    min_value = -max_value
-
-    return min_value, max_value
 
 
 __all__ = ("record",)
