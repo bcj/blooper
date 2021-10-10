@@ -5,7 +5,7 @@ They read those notes from parts. Wild stuff
 
 from abc import ABC, abstractmethod
 from itertools import chain, repeat
-from typing import Callable, Generator, Iterable, Iterator, Optional, Union
+from typing import Callable, Generator, Iterable, Iterator, Optional
 
 from blooper.dynamics import AttackDecaySustainRelease, DynamicRange, Envelope
 from blooper.parts import Part
@@ -71,7 +71,7 @@ class Synthesizer(Instrument):
         self,
         tuning: Tuning,
         *,
-        wave: Optional[Union[str, Callable[[float], float]]] = "sine",
+        wave: Optional[str | Callable[[float], float]] = "sine",
         balance: float = 0,
         envelope: Optional[Envelope] = None,
         dynamics: Optional[DynamicRange] = None,

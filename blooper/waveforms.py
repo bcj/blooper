@@ -3,7 +3,7 @@ Functions for generating different kinds of wave
 """
 
 import math
-from typing import Callable, Optional, Union
+from typing import Callable, Optional
 
 TWO_PI = math.pi * 2
 
@@ -85,7 +85,7 @@ class Waveform:
         frequency: float,
         sample_rate: int,
         *,
-        wave: Union[str, Callable[[float], float]] = sine_wave,
+        wave: str | Callable[[float], float] = sine_wave,
         phase: Optional[float] = None,
     ):
         """

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from fractions import Fraction
 from functools import cache
-from typing import Generator, Iterable, NamedTuple, Optional, Union
+from typing import Generator, Iterable, NamedTuple, Optional
 
 from blooper.notes import Accent, Dynamic, Note, Rest, Tone
 from blooper.pitch import accidental_symbol
@@ -170,7 +170,7 @@ class Part:
     time: TimeSignature
     tempo: int
     dynamic: Dynamic
-    measures: list[list[Union[Note, Rest]]]
+    measures: list[list[Note | Rest]]
     key: Optional[Key] = None
     # dict key is 0-indexed measure number
     time_changes: Optional[dict[int, TimeSignature]] = None
