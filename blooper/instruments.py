@@ -48,6 +48,19 @@ class Instrument(ABC):
 
         return left, right
 
+    @classmethod
+    def stereo_to_mono(cls, left: float, right: float, balance: float) -> tuple[float]:
+        """
+        Convert a stereo sample into a mono sample.
+
+        left: The left sample.
+        right: The right sample.
+        balance: The left/right balance. 0 is even, -1 is all left, 1 is
+            all right. left + right will always equal the mono input.
+        """
+
+        return (((left * (1 - balance)) + (right * (1 + balance))) / 2,)
+
     @abstractmethod
     def play(
         self, part: Part, sample_rate: int, *, channels: int = 2

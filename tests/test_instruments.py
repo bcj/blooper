@@ -40,6 +40,29 @@ def test_mono_to_stereo():
     assert Instrument.mono_to_stereo(0, 0.5) == (0, 0)
 
 
+def test_stereo_to_mono():
+    from blooper.instruments import Instrument
+
+    assert Instrument.stereo_to_mono(1, 1, 0) == (1,)
+    assert Instrument.stereo_to_mono(0.5, 0.5, 0) == (0.5,)
+    assert Instrument.stereo_to_mono(0.75, 0.25, 0) == (0.5,)
+    assert Instrument.stereo_to_mono(0, 0, 0) == (0,)
+
+    assert Instrument.stereo_to_mono(1, 0, -1) == (1,)
+    assert Instrument.stereo_to_mono(0, 1, -1) == (0,)
+    assert Instrument.stereo_to_mono(0.5, 0, -1) == (0.5,)
+    assert Instrument.stereo_to_mono(0, 0, -1) == (0,)
+
+    assert Instrument.stereo_to_mono(1, 0, 1) == (0,)
+    assert Instrument.stereo_to_mono(0, 1, 1) == (1,)
+    assert Instrument.stereo_to_mono(0, 0.5, 1) == (0.5,)
+    assert Instrument.stereo_to_mono(0, 0, 1) == (0,)
+
+    assert Instrument.stereo_to_mono(0.25, 0.75, 0.5) == (0.625,)
+    assert Instrument.stereo_to_mono(0.75, 0.25, 0.5) == (0.375,)
+    assert Instrument.stereo_to_mono(0, 0, 0.5) == (0,)
+
+
 def test_synthesizer():
     from blooper.dynamics import AttackDecaySustainRelease, DynamicRange, Homogenous
     from blooper.instruments import Synthesizer
