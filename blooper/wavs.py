@@ -17,10 +17,6 @@ FORMAT_TAG = 1  # No compression
 BITS_PER_SAMPLE = 32
 
 
-# TODO: Are most compositions going to be a single instrument and part?
-#       If so, you should make an alternate function that takes those
-#       and calls this.
-# TODO: Would be nice to pull some of the logic out of this for testing.
 def record(
     path: Path,
     mixer: Mixer,
@@ -33,7 +29,7 @@ def record(
     Write a WAV file by having a single instrument play a part
     """
     sample_format = SAMPLES[bits_per_sample]
-    max_value = (2 ** bits_per_sample) - 1
+    max_value = (2 ** (bits_per_sample - 1)) - 1
 
     block_align = channels * bits_per_sample // 8
     bytes_per_second = sample_rate * block_align
@@ -70,7 +66,7 @@ def record(
         file_header = struct.pack(
             FILE_HEADER,
             b"RIFF",
-            len(format_header) + format_size + len(data_header) + data_size,
+            4 + len(format_header) + format_size + len(data_header) + data_size,
             b"WAVE",
         )
 
