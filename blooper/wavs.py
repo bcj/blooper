@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import struct
 from pathlib import Path
-from typing import BinaryIO, Generator, Iterable
+from typing import Any, BinaryIO, Generator, Iterable
 
 from blooper.filetypes import SampleFile
 from blooper.mixers import Mixer
@@ -211,6 +211,18 @@ class WavSample(SampleFile):
 
                 if sample_index == self._num_samples:
                     break
+
+    def __hash__(self) -> int:
+        return hash(self.path)
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, WavSample):
+            return self.path == other.path
+
+        return NotImplemented
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.path!r})"
 
     @classmethod
     def from_path(cls, path: Path) -> WavSample:

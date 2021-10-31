@@ -1,4 +1,9 @@
+import json
+from dataclasses import dataclass
 from fractions import Fraction
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import Iterator
 
 import pytest
 
@@ -320,3 +325,291 @@ def test_synthesizer():
         tuning, wave=None, dynamics=loud_only, envelope=default_envelope
     )
     assert synthesizer.envelope == default_envelope
+
+
+def test_sampler():
+    from blooper.dynamics import DynamicRange, Homogenous
+    from blooper.instruments import Sampler
+    from blooper.notes import Dynamic, Tone
+    from blooper.pitch import Pitch, Tuning
+    from blooper.wavs import WavSample, record
+
+    # helpers
+    @dataclass
+    class FakeMixer:
+        part: list[tuple[float, ...]]
+
+        def mix(
+            self, sample_rate: int, channels: int, max_value: int
+        ) -> Iterator[tuple[int, ...]]:
+            for sample_set in self.part:
+                yield tuple(int(sample * max_value) for sample in sample_set)
+
+    def write_wav(path: Path, sample_rate: int, samples: list[tuple[int, ...]]):
+        if samples:
+            channels = len(samples[0])
+        else:
+            channels = 2
+
+        record(path, FakeMixer(samples), channels=channels, sample_rate=sample_rate)
+
+    tuning = Tuning(Pitch(4, "A"), 400)
+
+    # map samples
+    assert Sampler.map_samples({}, "wav") == {}
+
+    with pytest.raises(NotImplementedError):
+        Sampler.map_samples({}, "mp3")
+
+    with TemporaryDirectory() as directory_name:
+        directory = Path(directory_name)
+
+        sample_paths = {}
+
+        for name, frequency, sample_rate in (
+            ("a4_20,000.wav", 400, 20_000),
+            ("a4_20,000b.wav", 400, 20_000),
+            ("a4_40,000.wav", 400, 40_000),
+            ("a3_20,000.wav", 200, 20_000),
+            ("a3_20,000b.wav", 200, 20_000),
+            ("a3_40,000.wav", 200, 40_000),
+        ):
+            path = directory / name
+            write_wav(path, sample_rate, [(0, 0)])
+            sample_paths[path] = frequency
+
+        assert WavSample(directory / "a3_20,000.wav") == WavSample(
+            directory / "a3_20,000.wav"
+        )
+
+        expected = {
+            20_000: {
+                200: {
+                    WavSample(directory / "a3_20,000.wav"),
+                    WavSample(directory / "a3_20,000b.wav"),
+                },
+                400: {
+                    WavSample(directory / "a4_20,000.wav"),
+                    WavSample(directory / "a4_20,000b.wav"),
+                },
+            },
+            40_000: {
+                200: {WavSample(directory / "a3_40,000.wav")},
+                400: {WavSample(directory / "a4_40,000.wav")},
+            },
+        }
+        assert Sampler.map_samples(sample_paths, "wav") == expected
+
+        # constructor
+        config = directory / "samples.json"
+
+        with config.open("w") as stream:
+            json.dump({"format": "wav", "samples": []}, stream)
+
+        sampler = Sampler.from_file(config, tuning)
+        assert sampler.samples == {}
+
+        with config.open("w") as stream:
+            json.dump(
+                {
+                    "format": "wav",
+                    "samples": [
+                        {"path": "a4_20,000.wav", "frequency": 400},
+                        {
+                            "path": str(directory / "a4_20,000b.wav"),
+                            "frequency": 400,
+                        },
+                        {"path": "a4_40,000.wav", "frequency": 400},
+                        {"path": "a3_20,000.wav", "frequency": 200},
+                        {
+                            "path": str(directory / "a3_20,000b.wav"),
+                            "frequency": 200,
+                        },
+                        {"path": "a3_40,000.wav", "frequency": 200},
+                    ],
+                },
+                stream,
+            )
+
+        sampler = Sampler.from_file(config, tuning)
+        assert sampler.samples == expected
+
+        # compatible_samples
+
+        # matching frequency
+        assert sampler.compatible_samples(400, 10_000) == {
+            WavSample(directory / "a4_20,000.wav"),
+            WavSample(directory / "a4_20,000b.wav"),
+            WavSample(directory / "a4_40,000.wav"),
+        }
+        assert sampler.compatible_samples(400, 20_000) == {
+            WavSample(directory / "a4_20,000.wav"),
+            WavSample(directory / "a4_20,000b.wav"),
+            WavSample(directory / "a4_40,000.wav"),
+        }
+        assert sampler.compatible_samples(400, 30_000) == set()
+        assert sampler.compatible_samples(400, 40_000) == {
+            WavSample(directory / "a4_40,000.wav"),
+        }
+
+        # out of range
+        assert sampler.compatible_samples(300, 10_000) == set()
+
+        # in range
+        assert Sampler.from_file(
+            config, tuning, max_distance=500  # actual distance is 498
+        ).compatible_samples(300, 10_000) == {
+            WavSample(directory / "a4_20,000.wav"),
+            WavSample(directory / "a4_20,000b.wav"),
+            WavSample(directory / "a4_40,000.wav"),
+        }
+
+        # wait, why didn't you just pick different samples instead of
+        # finding the note equidistant from the samples you already had?
+        assert Sampler.from_file(config, tuning, max_distance=600).compatible_samples(
+            282.842712474619, 10_000
+        ) == {
+            WavSample(directory / "a3_20,000.wav"),
+            WavSample(directory / "a3_20,000b.wav"),
+            WavSample(directory / "a3_40,000.wav"),
+            WavSample(directory / "a4_20,000.wav"),
+            WavSample(directory / "a4_20,000b.wav"),
+            WavSample(directory / "a4_40,000.wav"),
+        }
+
+        # play
+        paths = {}
+        for frequency, samples in (
+            (200, [(1,), (-1,), (1,), (-1,), (1,)]),
+            (400, [(0.5, 0.5), (-0.5, -0.5)]),
+        ):
+            path = directory / f"{frequency}.wav"
+            write_wav(path, 20_000, samples)
+            paths[path] = frequency
+
+        envelope = Homogenous(DynamicRange(minimum_output=1, full_output=1))
+
+        class FakePart:
+            def __init__(self, tones):
+                self._tones = tones
+
+            def tones(self, sample_rate):
+                yield from self._tones
+
+        def compare_samples(a, b, digits=9):
+            a = list(a)
+            b = list(b)
+            assert len(a) == len(b)
+            for item_a, item_b in zip(a, b):
+                assert [round(channel, digits) for channel in item_a] == [
+                    round(channel, digits) for channel in item_b
+                ]
+
+        sampler = Sampler(paths, tuning, envelope, loop=False)
+        part = FakePart(
+            [
+                (3, Tone(3, Pitch(3, "A"), Dynamic.from_name("forte"))),
+                (7, Tone(3, Pitch(4, "A"), Dynamic.from_name("forte"))),
+                (11, Tone(3, Pitch(5, "A"), Dynamic.from_name("forte"))),
+                (14, Tone(3, Pitch(4, "A"), Dynamic.from_name("forte"))),
+            ]
+        )
+
+        # mono, no loop
+        compare_samples(
+            sampler.play(part, 20_000, channels=1),
+            [
+                (0,),
+                (0,),
+                (0,),
+                (1,),
+                (-1,),
+                (1,),
+                (0,),
+                (0.5,),
+                (-0.5,),
+                (0,),
+                (0,),
+                (0,),
+                (0,),
+                (0,),
+                (0.5,),
+                (-0.5,),
+            ],
+        )
+
+        # stereo, no loop
+        compare_samples(
+            sampler.play(part, 20_000, channels=2),
+            [
+                (0, 0),
+                (0, 0),
+                (0, 0),
+                (0.5, 0.5),
+                (-0.5, -0.5),
+                (0.5, 0.5),
+                (0, 0),
+                (0.5, 0.5),
+                (-0.5, -0.5),
+                (0, 0),
+                (0, 0),
+                (0, 0),
+                (0, 0),
+                (0, 0),
+                (0.5, 0.5),
+                (-0.5, -0.5),
+            ],
+        )
+
+        # quadrophenia
+        with pytest.raises(NotImplementedError):
+            list(sampler.play(part, 20_000, channels=4))
+
+        # mono, loop
+        sampler = Sampler(paths, tuning, envelope, loop=True)
+        compare_samples(
+            sampler.play(part, 20_000, channels=1),
+            [
+                (0,),
+                (0,),
+                (0,),
+                (1,),
+                (-1,),
+                (1,),
+                (0,),
+                (0.5,),
+                (-0.5,),
+                (0.5,),
+                (0,),
+                (0,),
+                (0,),
+                (0,),
+                (0.5,),
+                (-0.5,),
+                (0.5,),
+            ],
+        )
+
+        # stereo, loop
+        compare_samples(
+            sampler.play(part, 20_000, channels=2),
+            [
+                (0, 0),
+                (0, 0),
+                (0, 0),
+                (0.5, 0.5),
+                (-0.5, -0.5),
+                (0.5, 0.5),
+                (0, 0),
+                (0.5, 0.5),
+                (-0.5, -0.5),
+                (0.5, 0.5),
+                (0, 0),
+                (0, 0),
+                (0, 0),
+                (0, 0),
+                (0.5, 0.5),
+                (-0.5, -0.5),
+                (0.5, 0.5),
+            ],
+        )

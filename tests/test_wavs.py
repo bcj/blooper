@@ -195,6 +195,11 @@ def test_wav_sample():
         sample = WavSample.from_path(path)
         assert sample.channels == 1
         assert sample.sample_rate == 1000
+        assert sample == WavSample.from_path(path)
+        assert sample != WavSample.from_path(Path("./"))
+        assert sample != path
+
+        assert repr(sample) == f"WavSample({path!r})"
 
         # matching sample rate
         assert list(sample.load(1000, [1, 1, 1, 1])) == [(1,), (-1,), (0,), (0.5,)]
