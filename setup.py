@@ -8,6 +8,8 @@ from typing import List
 
 from setuptools import setup
 
+from blooper.version import __version__
+
 DIRECTORY = Path(__file__).parent
 REQUIREMENTS = DIRECTORY / "requirements"
 
@@ -20,8 +22,8 @@ def read_requirements(path: Path) -> List[str]:
 setup(
     name="blooper",
     description=("A software synth"),
-    long_description=(Path(__file__).parent / "README.md").read_text("utf-8"),
-    version="0.0.0",
+    long_description=(DIRECTORY / "README.md").read_text("utf-8"),
+    version=__version__,
     author="bcj",
     license=None,
     packages=("blooper",),
