@@ -92,29 +92,28 @@ def test_scale():
         ARAB_SCALE,
         BOHLEN_PIERCE_SCALE,
         CHROMATIC_SCALE,
+        FLAT,
+        SHARP,
         Pitch,
         Scale,
     )
 
-    flat = Fraction(-1, 2)
-    sharp = Fraction(1, 2)
-
     assert CHROMATIC_SCALE.position(Pitch(4, "C")) == (4, 0)
     assert CHROMATIC_SCALE.position(Pitch(4, "A")) == (4, 9)
-    assert CHROMATIC_SCALE.position(Pitch(4, "A", flat)) == (4, 8)
-    assert CHROMATIC_SCALE.position(Pitch(4, "A", sharp)) == (4, 10)
+    assert CHROMATIC_SCALE.position(Pitch(4, "A", FLAT)) == (4, 8)
+    assert CHROMATIC_SCALE.position(Pitch(4, "A", SHARP)) == (4, 10)
     assert CHROMATIC_SCALE.position(Pitch(2, "E")) == CHROMATIC_SCALE.position(
-        Pitch(2, "F", flat)
+        Pitch(2, "F", FLAT)
     )
-    assert CHROMATIC_SCALE.position(Pitch(2, "E", sharp)) == CHROMATIC_SCALE.position(
+    assert CHROMATIC_SCALE.position(Pitch(2, "E", SHARP)) == CHROMATIC_SCALE.position(
         Pitch(2, "F")
     )
     assert CHROMATIC_SCALE.position(Pitch(2, "F", Fraction(-3, 2))) == (2, 2)
-    assert CHROMATIC_SCALE.position(Pitch(4, "C", flat)) == (3, 11)
+    assert CHROMATIC_SCALE.position(Pitch(4, "C", FLAT)) == (3, 11)
     assert CHROMATIC_SCALE.position(Pitch(4, "C", Fraction(-5, 1))) == (3, 2)
     assert CHROMATIC_SCALE.position(Pitch(4, "C", Fraction(-31, 2))) == (1, 5)
     assert CHROMATIC_SCALE.position(Pitch(4, "B")) == (4, 11)
-    assert CHROMATIC_SCALE.position(Pitch(4, "B", sharp)) == (5, 0)
+    assert CHROMATIC_SCALE.position(Pitch(4, "B", SHARP)) == (5, 0)
     assert CHROMATIC_SCALE.position(Pitch(4, "B", Fraction(5, 1))) == (5, 9)
     assert CHROMATIC_SCALE.position(Pitch(4, "B", Fraction(31, 2))) == (7, 6)
 
@@ -148,13 +147,13 @@ def test_scale():
     )
 
     assert CHROMATIC_SCALE.position(Pitch(2, "E")) == solfege.position(Pitch(2, "Mi"))
-    assert CHROMATIC_SCALE.position(Pitch(2, "E", sharp)) == solfege.position(
+    assert CHROMATIC_SCALE.position(Pitch(2, "E", SHARP)) == solfege.position(
         Pitch(2, "Fa")
     )
     assert solfege.position(Pitch(2, "Ma")) == solfege.position(Pitch(2, "Me"))
 
     for pitch_class in ARAB_SCALE.classes:
-        for fraction in (Fraction(-1, 1), flat, Fraction(0, 1), sharp, Fraction(1, 1)):
+        for fraction in (Fraction(-1, 1), FLAT, Fraction(0, 1), SHARP, Fraction(1, 1)):
             chromatic_octave, chromatic_index = CHROMATIC_SCALE.position(
                 Pitch(4, pitch_class, fraction)
             )
@@ -171,8 +170,8 @@ def test_scale():
         CHROMATIC_SCALE.position(Pitch(4, "C", demisharp))
 
     assert BOHLEN_PIERCE_SCALE.position(Pitch(3, "J")) == (3, 9)
-    assert BOHLEN_PIERCE_SCALE.position(Pitch(3, "J", sharp)) == (3, 10)
-    assert BOHLEN_PIERCE_SCALE.position(Pitch(3, "B", sharp)) == (4, 0)
+    assert BOHLEN_PIERCE_SCALE.position(Pitch(3, "J", SHARP)) == (3, 10)
+    assert BOHLEN_PIERCE_SCALE.position(Pitch(3, "B", SHARP)) == (4, 0)
 
     # stealing numbers from this:
     # https://en.wikipedia.org/wiki/12_equal_temperament
@@ -187,14 +186,13 @@ def test_tuning():
     from blooper.pitch import (
         ARAB_SCALE,
         BOHLEN_PIERCE_SCALE,
+        FLAT,
         JUST_BOHLEN_PIERCE,
+        NATURAL,
+        SHARP,
         Pitch,
         Tuning,
     )
-
-    flat = Fraction(-1, 2)
-    natural = Fraction(0, 1)
-    sharp = Fraction(1, 2)
 
     twelve_tet = Tuning(Pitch(4, "A"), 440)
     twenty_four_tet = Tuning(Pitch(4, "A"), 440, scale=ARAB_SCALE)
@@ -209,12 +207,12 @@ def test_tuning():
     assert twelve_tet.pitch_to_frequency(Pitch(-2, "A")) == 6.875
     assert round(twelve_tet.pitch_to_frequency(Pitch(4, "C")), 4) == 261.6256
     assert round(twelve_tet.pitch_to_frequency(Pitch(8, "C")), 4) == 4186.009
-    assert round(twelve_tet.pitch_to_frequency(Pitch(3, "A", sharp)), 4) == 233.0819
-    assert round(twelve_tet.pitch_to_frequency(Pitch(3, "B", flat)), 4) == 233.0819
+    assert round(twelve_tet.pitch_to_frequency(Pitch(3, "A", SHARP)), 4) == 233.0819
+    assert round(twelve_tet.pitch_to_frequency(Pitch(3, "B", FLAT)), 4) == 233.0819
 
     for octave in range(5):
         for pitch_class in ARAB_SCALE.classes:
-            for accidental in (flat, natural, sharp):
+            for accidental in (FLAT, NATURAL, SHARP):
                 pitch = Pitch(octave, pitch_class, accidental)
 
                 assert twelve_tet.pitch_to_frequency(
@@ -235,20 +233,20 @@ def test_tuning():
     # most likely there is a discrepency in note names between either
     # that page and what I'm using or Bohlen's naming conventions as of
     # then and what I assume are the now-possibly-standard names.
-    bp_et = Tuning(Pitch(3, "C", natural), 440, scale=BOHLEN_PIERCE_SCALE)
+    bp_et = Tuning(Pitch(3, "C", NATURAL), 440, scale=BOHLEN_PIERCE_SCALE)
 
-    assert bp_et.pitch_to_frequency(Pitch(3, "C", natural)) == 440
-    assert bp_et.pitch_to_frequency(Pitch(2, "B", sharp)) == 440
-    assert bp_et.pitch_to_frequency(Pitch(4, "C", natural)) == 1320
-    assert bp_et.pitch_to_frequency(Pitch(3, "B", sharp)) == 1320
-    assert bp_et.pitch_to_frequency(Pitch(5, "C", natural)) == 3960
-    assert bp_et.pitch_to_frequency(Pitch(2, "C", natural)) == 440 / 3
+    assert bp_et.pitch_to_frequency(Pitch(3, "C", NATURAL)) == 440
+    assert bp_et.pitch_to_frequency(Pitch(2, "B", SHARP)) == 440
+    assert bp_et.pitch_to_frequency(Pitch(4, "C", NATURAL)) == 1320
+    assert bp_et.pitch_to_frequency(Pitch(3, "B", SHARP)) == 1320
+    assert bp_et.pitch_to_frequency(Pitch(5, "C", NATURAL)) == 3960
+    assert bp_et.pitch_to_frequency(Pitch(2, "C", NATURAL)) == 440 / 3
 
-    assert round(bp_et.pitch_to_frequency(Pitch(0, "H", sharp)), 2) == 32.04
-    assert round(bp_et.pitch_to_frequency(Pitch(4, "C", sharp)), 2) == 1436.4
+    assert round(bp_et.pitch_to_frequency(Pitch(0, "H", SHARP)), 2) == 32.04
+    assert round(bp_et.pitch_to_frequency(Pitch(4, "C", SHARP)), 2) == 1436.4
 
     bp_just = Tuning(
-        Pitch(3, "C", natural),
+        Pitch(3, "C", NATURAL),
         440,
         scale=BOHLEN_PIERCE_SCALE,
         temperament=JUST_BOHLEN_PIERCE,
@@ -257,27 +255,27 @@ def test_tuning():
     # notes in the same pitch class as the tuning note should match exactly
     # between equal temperament and just intonation
     for pitch in (
-        Pitch(3, "C", natural),
-        Pitch(2, "B", sharp),
-        Pitch(4, "C", natural),
-        Pitch(3, "B", sharp),
-        Pitch(5, "C", natural),
-        Pitch(2, "C", natural),
+        Pitch(3, "C", NATURAL),
+        Pitch(2, "B", SHARP),
+        Pitch(4, "C", NATURAL),
+        Pitch(3, "B", SHARP),
+        Pitch(5, "C", NATURAL),
+        Pitch(2, "C", NATURAL),
     ):
         assert bp_just.pitch_to_frequency(pitch) == bp_et.pitch_to_frequency(pitch)
 
     # We could use the numbers in this table to work out exact frequencies
     # for a given tuning. I do not know how to do this though.
     # https://en.wikipedia.org/wiki/Bohlen%E2%80%93Pierce_scale#Intervals_and_scale_diagrams
-    assert round(bp_just.pitch_to_frequency(Pitch(3, "C", sharp)), 8) == round(
+    assert round(bp_just.pitch_to_frequency(Pitch(3, "C", SHARP)), 8) == round(
         440 * 27 / 25, 8
     )
-    assert round(bp_just.pitch_to_frequency(Pitch(3, "A", natural)), 8) == round(
+    assert round(bp_just.pitch_to_frequency(Pitch(3, "A", NATURAL)), 8) == round(
         440 * 7 / 3, 8
     )
-    assert round(bp_just.pitch_to_frequency(Pitch(3, "A", sharp)), 8) == round(
+    assert round(bp_just.pitch_to_frequency(Pitch(3, "A", SHARP)), 8) == round(
         440 * 63 / 25, 8
     )
-    assert round(bp_just.pitch_to_frequency(Pitch(4, "C", sharp)), 8) == round(
+    assert round(bp_just.pitch_to_frequency(Pitch(4, "C", SHARP)), 8) == round(
         1320 * 27 / 25, 8
     )

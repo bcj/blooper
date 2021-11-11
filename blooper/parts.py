@@ -17,7 +17,7 @@ from functools import cache
 from typing import Generator, Iterable, NamedTuple, Optional
 
 from blooper.notes import Accent, Dynamic, Note, Rest, Tone
-from blooper.pitch import accidental_symbol
+from blooper.pitch import FLAT, NATURAL, SHARP, accidental_symbol
 
 
 # TODO: Still not sure if this and Scale interact in the way we want.
@@ -53,7 +53,7 @@ class Key:
 
     @cache
     def accidental(self, pitch_class: str) -> Fraction:
-        return self.accidentals.get(pitch_class, Fraction(0, 1))
+        return self.accidentals.get(pitch_class, NATURAL)
 
     @classmethod
     def new(
@@ -70,9 +70,8 @@ class Key:
 
         accidentals = {}
 
-        for pitch_classes, magnitude in ((flats, -1), (sharps, 1)):
+        for pitch_classes, accidental in ((flats, FLAT), (sharps, SHARP)):
             if pitch_classes:
-                accidental = Fraction(magnitude, 2)
 
                 for pitch_class in pitch_classes:
                     if pitch_class in accidentals:

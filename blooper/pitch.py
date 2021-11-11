@@ -64,6 +64,10 @@ ACCIDENTAL_NAMES = {
     "sesquisharp": Fraction(3, 4),
 }
 
+FLAT = ACCIDENTAL_NAMES["flat"]
+NATURAL = ACCIDENTAL_NAMES["natural"]
+SHARP = ACCIDENTAL_NAMES["sharp"]
+
 
 @cache
 def accidental_symbol(accidental: Fraction) -> str:
@@ -396,7 +400,10 @@ __all__ = (
     "ARAB_SCALE",
     "CHROMATIC_SCALE",
     "BOHLEN_PIERCE_SCALE",
+    "FLAT",
     "JUST_BOHLEN_PIERCE",
+    "NATURAL",
+    "SHARP",
     "Pitch",
     "Scale",
     "Tuning",

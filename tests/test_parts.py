@@ -5,85 +5,82 @@ import pytest
 
 def test_key():
     from blooper.parts import Key
-
-    flat = Fraction(-1, 2)
-    natural = Fraction(0, 1)
-    sharp = Fraction(1, 2)
+    from blooper.pitch import FLAT, NATURAL, SHARP
 
     key = Key("C", True, {})
 
-    assert key.accidental("C") == natural
-    assert key.accidental("D") == natural
-    assert key.accidental("E") == natural
-    assert key.accidental("F") == natural
-    assert key.accidental("G") == natural
-    assert key.accidental("A") == natural
-    assert key.accidental("B") == natural
+    assert key.accidental("C") == NATURAL
+    assert key.accidental("D") == NATURAL
+    assert key.accidental("E") == NATURAL
+    assert key.accidental("F") == NATURAL
+    assert key.accidental("G") == NATURAL
+    assert key.accidental("A") == NATURAL
+    assert key.accidental("B") == NATURAL
 
-    key = Key("C", True, {"G": Fraction(1, 1), "A": flat})
+    key = Key("C", True, {"G": Fraction(1, 1), "A": FLAT})
 
-    assert key.accidental("C") == natural
-    assert key.accidental("D") == natural
-    assert key.accidental("E") == natural
-    assert key.accidental("F") == natural
+    assert key.accidental("C") == NATURAL
+    assert key.accidental("D") == NATURAL
+    assert key.accidental("E") == NATURAL
+    assert key.accidental("F") == NATURAL
     assert key.accidental("G") == Fraction(1, 1)
-    assert key.accidental("A") == flat
-    assert key.accidental("B") == natural
+    assert key.accidental("A") == FLAT
+    assert key.accidental("B") == NATURAL
 
     key = Key.new("C", True)
 
     assert key.name == "C Major"
-    assert key.accidental("C") == natural
-    assert key.accidental("D") == natural
-    assert key.accidental("E") == natural
-    assert key.accidental("F") == natural
-    assert key.accidental("G") == natural
-    assert key.accidental("A") == natural
-    assert key.accidental("B") == natural
+    assert key.accidental("C") == NATURAL
+    assert key.accidental("D") == NATURAL
+    assert key.accidental("E") == NATURAL
+    assert key.accidental("F") == NATURAL
+    assert key.accidental("G") == NATURAL
+    assert key.accidental("A") == NATURAL
+    assert key.accidental("B") == NATURAL
 
     key = Key.new("G", True, sharps=("F",))
 
     assert key.name == "G Major"
-    assert key.accidental("C") == natural
-    assert key.accidental("D") == natural
-    assert key.accidental("E") == natural
-    assert key.accidental("F") == sharp
-    assert key.accidental("G") == natural
-    assert key.accidental("A") == natural
-    assert key.accidental("B") == natural
+    assert key.accidental("C") == NATURAL
+    assert key.accidental("D") == NATURAL
+    assert key.accidental("E") == NATURAL
+    assert key.accidental("F") == SHARP
+    assert key.accidental("G") == NATURAL
+    assert key.accidental("A") == NATURAL
+    assert key.accidental("B") == NATURAL
 
     key = Key.new("A", True, sharps=("C", "F", "G"))
 
     assert key.name == "A Major"
-    assert key.accidental("C") == sharp
-    assert key.accidental("D") == natural
-    assert key.accidental("E") == natural
-    assert key.accidental("F") == sharp
-    assert key.accidental("G") == sharp
-    assert key.accidental("A") == natural
-    assert key.accidental("B") == natural
+    assert key.accidental("C") == SHARP
+    assert key.accidental("D") == NATURAL
+    assert key.accidental("E") == NATURAL
+    assert key.accidental("F") == SHARP
+    assert key.accidental("G") == SHARP
+    assert key.accidental("A") == NATURAL
+    assert key.accidental("B") == NATURAL
 
     key = Key.new("F", True, sharps=("F", "G", "A", "C", "D", "E"))
 
     assert key.name == "F♯ Major"
-    assert key.accidental("C") == sharp
-    assert key.accidental("D") == sharp
-    assert key.accidental("E") == sharp
-    assert key.accidental("F") == sharp
-    assert key.accidental("G") == sharp
-    assert key.accidental("A") == sharp
-    assert key.accidental("B") == natural
+    assert key.accidental("C") == SHARP
+    assert key.accidental("D") == SHARP
+    assert key.accidental("E") == SHARP
+    assert key.accidental("F") == SHARP
+    assert key.accidental("G") == SHARP
+    assert key.accidental("A") == SHARP
+    assert key.accidental("B") == NATURAL
 
     key = Key.new("B", False, flats=("B", "D", "E", "G", "A"))
 
     assert key.name == "B♭ Minor"
-    assert key.accidental("C") == natural
-    assert key.accidental("D") == flat
-    assert key.accidental("E") == flat
-    assert key.accidental("F") == natural
-    assert key.accidental("G") == flat
-    assert key.accidental("A") == flat
-    assert key.accidental("B") == flat
+    assert key.accidental("C") == NATURAL
+    assert key.accidental("D") == FLAT
+    assert key.accidental("E") == FLAT
+    assert key.accidental("F") == NATURAL
+    assert key.accidental("G") == FLAT
+    assert key.accidental("A") == FLAT
+    assert key.accidental("B") == FLAT
 
     with pytest.raises(ValueError):
         Key.new("B", False, flats=("B", "D", "E", "G", "A", "A"))
