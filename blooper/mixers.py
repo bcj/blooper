@@ -80,3 +80,6 @@ class Mixer:
             yield tuple(
                 max(-max_value, min(max_value, round(sample))) for sample in mixed
             )
+
+
+__all__ = ("Mixer",)
