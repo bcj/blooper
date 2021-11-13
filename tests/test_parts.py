@@ -283,8 +283,8 @@ def test_part_adjust_duration():
 
 def test_part():
     from blooper.notes import Accent, Dynamic, Note, Rest, Tone
-    from blooper.parts import KEYS, Part, TimeSignature
-    from blooper.pitch import Pitch
+    from blooper.parts import KEYS, Key, Part, TimeSignature
+    from blooper.pitch import FLAT, NATURAL, SHARP, Pitch
 
     common_time = TimeSignature(4, 4)
     waltz_time = TimeSignature(3, 4)
@@ -310,37 +310,34 @@ def test_part():
             ],
             [
                 Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.SLUR),
+                Note(Fraction(1, 8), Pitch(4, "A", SHARP), accent=Accent.TENUTO),
                 Note(
                     Fraction(1, 8),
-                    Pitch(4, "A", Fraction(1, 2)),
-                    accent=Accent.TENUTO,
-                ),
-                Note(
-                    Fraction(1, 8),
-                    Pitch(4, "A", Fraction(1, 2)),
+                    Pitch(4, "A", SHARP),
                     dynamic=piano,
                     accent=Accent.MARCATO,
                 ),
                 Note(Fraction(1, 4), Pitch(4, "B"), accent=Accent.ACCENT),
-                Note(
-                    Fraction(1, 4), Pitch(4, "B", Fraction(1, 2)), accent=Accent.TENUTO
-                ),
+                Note(Fraction(1, 4), Pitch(4, "B", SHARP), accent=Accent.TENUTO),
             ],
             [
                 Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
-                Note(Fraction(1, 4), Pitch(3, "F", Fraction(1, 2)), accent=Accent.SLUR),
+                Note(Fraction(1, 4), Pitch(3, "F", SHARP), accent=Accent.SLUR),
             ],
             [
-                Note(Fraction(1, 4), Pitch(3, "F", Fraction(1, 2)), accent=Accent.SLUR),
-                Note(
-                    Fraction(1, 8), Pitch(3, "F", Fraction(1, 2)), accent=Accent.TENUTO
-                ),
+                Note(Fraction(1, 4), Pitch(3, "F", SHARP), accent=Accent.SLUR),
+                Note(Fraction(1, 8), Pitch(3, "F", SHARP), accent=Accent.TENUTO),
                 Rest(Fraction(1, 2)),
                 Note(Fraction(1, 8), Pitch(3, "A"), accent=Accent.TENUTO),
             ],
         ],
         KEYS["C Major"],
         time_changes={2: waltz_time, 3: common_time},
+        key_changes={
+            0: {Fraction(3, 4): Key.new("A", True, flats=["A"])},
+            1: {Fraction(1, 4): KEYS["C Major"]},
+            3: {Fraction(0, 1): Key.new("A", True, flats=["A"])},
+        },
         tempo_changes={
             # tempo change twice in one held note
             0: {Fraction(1, 4): 180, Fraction(3, 8): 240, Fraction(3, 4): 120},
@@ -358,15 +355,15 @@ def test_part():
 
     # sorry future me if you ever need to change this
     assert tones == [
-        (0, Tone(23_750, Pitch(4, "A"), forte)),
-        (46_250, Tone(30_000, Pitch(4, "A"), fortissimo, Accent.SLUR)),
-        (76_250, Tone(15_000, Pitch(4, "A", Fraction(1, 2)), mezzo_forte)),
-        (91_250, Tone(3_750, Pitch(4, "A", Fraction(1, 2)), piano, Accent.ACCENT)),
-        (98_750, Tone(11_250, Pitch(4, "B"), mezzo_forte, Accent.ACCENT)),
-        (113_750, Tone(15_000, Pitch(4, "B", Fraction(1, 2)), mezzo_forte)),
-        (128_750, Tone(30_000, Pitch(3, "A"), mezzo_forte)),
-        (158_750, Tone(37_500, Pitch(3, "F", Fraction(1, 2)), mezzo_forte)),
-        (226_250, Tone(7_500, Pitch(3, "A"), mezzo_forte)),
+        (0, Tone(23_750, Pitch(4, "A", NATURAL), forte)),
+        (46_250, Tone(30_000, Pitch(4, "A", FLAT), fortissimo, Accent.SLUR)),
+        (76_250, Tone(15_000, Pitch(4, "A", SHARP), mezzo_forte)),
+        (91_250, Tone(3_750, Pitch(4, "A", SHARP), piano, Accent.ACCENT)),
+        (98_750, Tone(11_250, Pitch(4, "B", NATURAL), mezzo_forte, Accent.ACCENT)),
+        (113_750, Tone(15_000, Pitch(4, "B", SHARP), mezzo_forte)),
+        (128_750, Tone(30_000, Pitch(3, "A", NATURAL), mezzo_forte)),
+        (158_750, Tone(37_500, Pitch(3, "F", SHARP), mezzo_forte)),
+        (226_250, Tone(7_500, Pitch(3, "A", FLAT), mezzo_forte)),
     ]
 
     # illegal music
@@ -399,6 +396,25 @@ def test_part():
     assert next(generator) == (0, Tone(30_000, Pitch(3, "A"), forte))
     assert next(generator) == (30_000, Tone(15_000, Pitch(3, "A"), fortissimo))
     with pytest.raises(StopIteration):
+        next(generator)
+
+    # don't change key within a note
+    part = Part(
+        common_time,
+        120,
+        forte,
+        [
+            [
+                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
+                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
+            ]
+        ],
+        key_changes={0: {Fraction(3, 4): KEYS["F Minor"]}},
+    )
+    generator = part.tones(30_000)
+    assert next(generator) == (0, Tone(30_000, Pitch(3, "A"), forte))
+    next(generator)  # will be wrong. we don't care, it will crash next iteration
+    with pytest.raises(ValueError):
         next(generator)
 
     # don't change tempo within a note

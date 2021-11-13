@@ -17,7 +17,7 @@ from functools import cache
 from typing import Generator, Iterable, NamedTuple, Optional
 
 from blooper.notes import Accent, Dynamic, Note, Rest, Tone
-from blooper.pitch import FLAT, NATURAL, SHARP, accidental_symbol
+from blooper.pitch import FLAT, NATURAL, SHARP, Pitch, accidental_symbol
 
 
 # TODO: Still not sure if this and Scale interact in the way we want.
@@ -54,6 +54,15 @@ class Key:
     @cache
     def accidental(self, pitch_class: str) -> Fraction:
         return self.accidentals.get(pitch_class, NATURAL)
+
+    @cache
+    def in_key(self, pitch: Pitch) -> Pitch:
+        if pitch.accidental is None:
+            return Pitch(
+                pitch.order, pitch.pitch_class, self.accidental(pitch.pitch_class)
+            )
+
+        return pitch
 
     @classmethod
     def new(
@@ -279,8 +288,11 @@ class Part:
         """
 
         time_changes = self.time_changes or {}
+        key_changes = self.key_changes or {}
         tempo_changes = self.tempo_changes or {}
         dynamic_changes = self.dynamic_changes or {}
+
+        key = self.key
 
         beat_size = Fraction(1, self.time.beat_size)
         tempo = self.tempo
@@ -297,10 +309,14 @@ class Part:
             if measure in time_changes:
                 beat_size = Fraction(1, time_changes[measure].beat_size)
 
+            measure_key_changes = sorted(key_changes.get(measure, {}).items())
             measure_tempo_changes = sorted(tempo_changes.get(measure, {}).items())
             measure_dynamic_changes = sorted(dynamic_changes.get(measure, {}).items())
 
             position = Fraction(0, 1)
+            if measure_key_changes and measure_key_changes[0][0] == position:
+                key = measure_key_changes.pop(0)[1]
+
             if measure_tempo_changes and measure_tempo_changes[0][0] == position:
                 tempo = measure_tempo_changes.pop(0)[1]
                 samples_per_beat = round(sample_rate * 60 / tempo)
@@ -325,6 +341,11 @@ class Part:
                         )
                         note = self.adjust_duration(note_or_rest, beat_size)
 
+                        if key:
+                            pitch = key.in_key(note.pitch)
+                        else:
+                            pitch = note.pitch
+
                         if note.duration != note_or_rest.duration:
                             samples = round(
                                 samples_per_beat * beat_size.denominator * note.duration
@@ -332,14 +353,14 @@ class Part:
 
                         tone = Tone(
                             samples,
-                            note.pitch,
+                            pitch,
                             note.dynamic or dynamic,
                             note.accent,
                         )
 
                         start_index = index
                         if tied_tone:
-                            if tied_tone.pitch != note.pitch:
+                            if tied_tone.pitch != pitch:
                                 # It was a slur not a tie
                                 yield tied_index, tied_tone
                                 tied_tone = None
@@ -364,6 +385,15 @@ class Part:
 
                     position += note_or_rest.duration
                     index += full_samples
+
+                    if measure_key_changes:
+                        if measure_key_changes[0][0] < position:
+                            raise ValueError(
+                                f"Key change at {measure}: "
+                                f"{measure_key_changes[0][0]} falls within a note"
+                            )
+                        elif measure_key_changes[0][0] == position:
+                            key = measure_key_changes.pop(0)[1]
 
                     if measure_tempo_changes:
                         if measure_tempo_changes[0][0] < position:

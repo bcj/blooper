@@ -32,10 +32,10 @@ def test_accidental_symbol():
 def test_pitch():
     from blooper.pitch import Pitch
 
-    assert Pitch.new(4, "A") == Pitch(4, "A", Fraction(0, 1))
+    assert Pitch.new(4, "A") == Pitch(4, "A", None)
 
     # names
-    assert Pitch.new(4, "A", "natural") == Pitch(4, "A")
+    assert Pitch.new(4, "A", "natural") == Pitch(4, "A", Fraction(0, 1))
     assert Pitch.new(4, "A", "sesquiflat") == Pitch(4, "A", Fraction(-3, 4))
     assert Pitch.new(4, "A", "double sharp") == Pitch(4, "A", Fraction(1, 1))
     assert Pitch.new(4, "A", "octuple-sharp") == Pitch(4, "A", Fraction(4, 1))
@@ -57,7 +57,7 @@ def test_pitch():
     assert Pitch.new(4, "A", "double demisharp") == Pitch(4, "A", Fraction(1, 2))
 
     # symbols
-    assert Pitch.new(4, "A", "♮") == Pitch(4, "A")
+    assert Pitch.new(4, "A", "♮") == Pitch(4, "A", Fraction(0, 1))
     assert Pitch.new(4, "A", "ȸ") == Pitch(4, "A", Fraction(-3, 4))
     assert Pitch.new(4, "A", "𝄪") == Pitch(4, "A", Fraction(1, 1))
 
@@ -82,7 +82,8 @@ def test_pitch():
         Pitch.new(4, "A", "?")
 
     # converting to a string
-    assert str(Pitch(4, "A")) == "A₄♮"
+    assert str(Pitch(4, "A")) == "A₄"
+    assert str(Pitch(4, "A", Fraction(0, 1))) == "A₄♮"
     assert str(Pitch(-13, "C", Fraction(15, 4))) == "C₋₁₃𝄪𝄪𝄪⩩"
     assert str(Pitch(0, "J", Fraction(-1, 2))) == "J₀♭"
 
@@ -93,12 +94,14 @@ def test_scale():
         BOHLEN_PIERCE_SCALE,
         CHROMATIC_SCALE,
         FLAT,
+        NATURAL,
         SHARP,
         Pitch,
         Scale,
     )
 
     assert CHROMATIC_SCALE.position(Pitch(4, "C")) == (4, 0)
+    assert CHROMATIC_SCALE.position(Pitch(4, "C", NATURAL)) == (4, 0)
     assert CHROMATIC_SCALE.position(Pitch(4, "A")) == (4, 9)
     assert CHROMATIC_SCALE.position(Pitch(4, "A", FLAT)) == (4, 8)
     assert CHROMATIC_SCALE.position(Pitch(4, "A", SHARP)) == (4, 10)

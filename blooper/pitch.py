@@ -126,7 +126,7 @@ class Pitch:
 
     order: int
     pitch_class: str
-    accidental: Fraction = Fraction(0, 1)
+    accidental: Optional[Fraction] = None
 
     @classmethod
     def new(
@@ -148,7 +148,7 @@ class Pitch:
         * assuming a chromatic scale (or an Arab scale)
         """
         if accidental is None:
-            fraction = Fraction(0, 1)
+            fraction = None
         else:
             try:
                 match = re.search(r"^(?:(\w+)[- ])?(\w+)$", accidental.lower())
@@ -201,8 +201,12 @@ class Pitch:
     def __str__(self) -> str:
         # left as an exercise for the reader: from_str
         order = "".join(SUBSCRIPTS[c] for c in str(self.order))
+        if self.accidental is None:
+            symbol = ""
+        else:
+            symbol = accidental_symbol(self.accidental)
 
-        return f"{self.pitch_class}{order}{accidental_symbol(self.accidental)}"
+        return f"{self.pitch_class}{order}{symbol}"
 
 
 # TODO: It is maybe worth considering how this interacts with Key.
@@ -259,13 +263,15 @@ class Scale:
         NOTE: accidentals mean that a pitches order may not match the
         returned pitch (e.g., C₄♭ would actually be in order 3).
         """
-        if pitch.accidental % self.step_size:
+        accidental = pitch.accidental or Fraction(0, 1)
+
+        if accidental % self.step_size:
             raise ValueError(
                 f"Pitch {pitch} not offset by multiple of step size: {self.step_size}"
             )
 
         order = pitch.order
-        step = self.classes[pitch.pitch_class] + (pitch.accidental // self.step_size)
+        step = self.classes[pitch.pitch_class] + (accidental // self.step_size)
 
         while step < 0:
             order -= 1
