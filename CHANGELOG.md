@@ -18,7 +18,7 @@ Initial working version
  *  Specify musical parts with time, key, tempo, and dynamic changes
      *  **NOTE**: individual parts do not currently support polyphony
  *  Support for customizable instruments with adjustable dynamic ranges and note envelopes
-     *  Synthesizers: support sine, squar, triangle, and sawtooth waves
+     *  Synthesizers: support sine, square, triangle, and sawtooth waves
      *  Samplers: support for playing back samples from WAV files
  *  Polyphonics (via multiple parts. Each part is monophonic)
  *  Writing to WAV files (in stereo or mono)
