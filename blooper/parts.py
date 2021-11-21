@@ -14,14 +14,14 @@ from dataclasses import dataclass
 from enum import IntEnum
 from fractions import Fraction
 from functools import cache
-from typing import Generator, Iterable, NamedTuple, Optional
+from typing import Generator, Iterable, NamedTuple, Optional, cast
 
-from blooper.notes import Accent, Dynamic, Note, Rest, Tone
+from blooper.notes import TAILOFF_FACTOR, Accent, Dynamic, Note, Rest, Tone
 from blooper.pitch import FLAT, NATURAL, SHARP, Pitch, accidental_symbol
 
 
 # TODO: Still not sure if this and Scale interact in the way we want.
-# Major/Minor also seems presumptive
+# TODO: change to: name, root (pitch_class, accidental), accidentals
 @dataclass(frozen=True)
 class Key:
     """
@@ -31,25 +31,25 @@ class Key:
     Any unspecificed class is assumed to be natural.
     """
 
-    tonic: str
+    root: str
     major: bool
     accidentals: dict[str, Fraction]
 
     @property
     def name(self) -> str:
-        accidental = self.accidental(self.tonic)
+        accidental = self.accidental(self.root)
         if accidental:
-            tonic = f"{self.tonic}{accidental_symbol(accidental)}"
+            root = f"{self.root}{accidental_symbol(accidental)}"
         else:
-            tonic = self.tonic
+            root = self.root
 
         kind = "Major" if self.major else "Minor"
 
-        return f"{tonic} {kind}"
+        return f"{root} {kind}"
 
     # needed so we can cache tone_to_step
     def __hash__(self) -> int:
-        return hash((self.tonic, self.major, tuple(sorted(self.accidentals.items()))))
+        return hash((self.root, self.major, tuple(sorted(self.accidentals.items()))))
 
     @cache
     def accidental(self, pitch_class: str) -> Fraction:
@@ -67,7 +67,7 @@ class Key:
     @classmethod
     def new(
         cls,
-        tonic: str,
+        root: str,
         major: bool,
         *,
         flats: Optional[Iterable[str]] = None,
@@ -88,7 +88,7 @@ class Key:
 
                     accidentals[pitch_class] = accidental
 
-        return cls(tonic, major, accidentals)
+        return cls(root, major, accidentals)
 
 
 KEYS = {
@@ -121,10 +121,14 @@ KEYS = {
 
 class TimeSignature(NamedTuple):
     beats_per_measure: int
-    beat_size: int  # actually a reciprical
+    beat_size: Fraction
+
+    @classmethod
+    def new(cls, beats_per_measure: int, beat_size: int) -> TimeSignature:
+        return TimeSignature(beats_per_measure, Fraction(1, beat_size))
 
     def __str__(self) -> str:
-        return f"{self.beats_per_measure}/{self.beat_size}"
+        return f"{self.beats_per_measure}/{self.beat_size.denominator}"
 
 
 # These numbers have been somewhat arbitrarily chosen such that they
@@ -164,7 +168,202 @@ class Tempo(IntEnum):
     PRESTISSIMO = 240
 
 
-# TODO: This sure feels like a real mess still
+@dataclass
+class State:
+    time: TimeSignature
+    tempo: int
+    dynamic: Dynamic
+    key: Optional[Key] = None
+    tailoff_factor: Fraction = TAILOFF_FACTOR
+
+
+class Measure:
+    """
+    A measure of music
+    """
+
+    def __init__(
+        self,
+        notes: Optional[Iterable[Note | Rest]] = None,
+        *,
+        time: Optional[TimeSignature] = None,
+        tempos: Optional[dict[Fraction, int]] = None,
+        dynamics: Optional[dict[Fraction, Dynamic]] = None,
+        keys: Optional[dict[Fraction, Key]] = None,
+    ):
+        self.notes = list(notes) if notes else []
+        self.time = time
+        self.tempos = tempos or {}
+        self.dynamics = dynamics or {}
+        self.keys = keys or {}
+
+    def length(self) -> Fraction:
+        """
+        The current length of the measure
+        """
+        return Fraction(sum(note.duration for note in self.notes))
+
+    def add(
+        self,
+        note: Note | Rest,
+        *,
+        tempo: Optional[int] = None,
+        dynamic: Optional[Dynamic] = None,
+        key: Optional[Key] = None,
+    ):
+        """
+        Add a note to the end of a measure, possibly including a tempo,
+        dynamic, or key change.
+
+        note: The note or rest being added
+        tempo: A new tempo that starts at the beginning of the note.
+        dynamic: A new dynamic that starts at the beginning of the note.
+        key: A new key that starts at the beginning of the note.
+        """
+        if tempo or dynamic or key:
+            position = self.length()
+
+            if tempo:
+                self.tempos[position] = tempo
+
+            if dynamic:
+                self.dynamics[position] = dynamic
+
+            if key:
+                self.keys[position] = key
+
+        self.notes.append(note)
+
+    @classmethod
+    def _position(cls, time: TimeSignature, position: Fraction) -> str:
+        """
+        Provides a nice text representation of a position within a part.
+        used for error messages.
+        """
+        beats = position // time.beat_size
+        partial_beats = position % time.beat_size
+
+        if partial_beats:
+            return f"{beats} + {partial_beats}"
+
+        return str(beats)
+
+    def play(
+        self,
+        state: State,
+        previous: Optional[Accent] = None,
+    ) -> Iterable[Note | Rest]:
+        """
+        Iterate over all notes and rests in a measure, modifying the
+        current state of the part being played
+        """
+        if self.time:
+            state.time = self.time
+
+        if state.key is None:
+            state.key = KEYS["C Major"]
+
+        measure_size = state.time.beat_size * state.time.beats_per_measure
+
+        position = Fraction(0, 1)
+
+        notes = self.notes
+        length = self.length()
+        if length > measure_size:
+            raise ValueError(
+                f"More notes than can fit in the measure ({length} > {measure_size})"
+            )
+        elif length < measure_size:
+            notes = [*notes, Rest(measure_size - length)]
+
+        tempo_changes = sorted(self.tempos.items())
+        dynamic_changes = sorted(self.dynamics.items())
+        key_changes = sorted(self.keys.items())
+
+        count = len(notes)
+        for index, note in enumerate(notes, 1):
+            if tempo_changes:
+                change_position = tempo_changes[0][0]
+                if change_position < position:
+                    raise ValueError(
+                        f"Error at beat {self._position(state.time, change_position)}: "
+                        "Tempo change mid-note. Use a tie."
+                    )
+                elif change_position == position:
+                    state.tempo = tempo_changes.pop(0)[1]
+                elif index == count:
+                    raise ValueError(
+                        f"Error at beat {self._position(state.time, change_position)}: "
+                        "Tempo change after measure."
+                    )
+
+            if dynamic_changes:
+                change_position = dynamic_changes[0][0]
+                if change_position < position:
+                    raise ValueError(
+                        f"Error at beat {self._position(state.time, change_position)}: "
+                        "Tempo change mid-note. Use a tie."
+                    )
+                elif change_position == position:
+                    state.dynamic = dynamic_changes.pop(0)[1]
+                elif index == count:
+                    raise ValueError(
+                        f"Error at beat {self._position(state.time, change_position)}: "
+                        "Dynamic change after measure."
+                    )
+
+            if key_changes:
+                change_position = key_changes[0][0]
+                if change_position < position:
+                    raise ValueError(
+                        f"Error at beat {self._position(state.time, change_position)}: "
+                        "Tempo change mid-note. Use a tie."
+                    )
+                elif change_position == position:
+                    state.key = key_changes.pop(0)[1]
+                elif index == count:
+                    raise ValueError(
+                        f"Error at beat {self._position(state.time, change_position)}: "
+                        "Key change after measure."
+                    )
+
+            if isinstance(note, Note):
+                if note.accent:
+                    if state.time.beat_size < note.duration and not note.accent.long():
+                        raise ValueError(
+                            f"Error at beat {self._position(state.time, position)}: "
+                            f"invalid accent for a long note: {note.accent}"
+                        )
+
+                    if not note.accent.can_follow(previous):
+                        raise ValueError(
+                            f"Error at beat {self._position(state.time, position)}: "
+                            f"accent {note.accent} can not follow {previous}"
+                        )
+
+                duration, pitch, dynamic, accent = note.components(
+                    state.time.beat_size, tailoff_factor=state.tailoff_factor
+                )
+
+                pitch = state.key.in_key(pitch)
+
+                yield Note(duration, pitch, dynamic or state.dynamic, accent)
+
+                if duration != note.duration:
+                    yield Rest(note.duration - duration)
+
+                position += note.duration
+                previous = note.accent
+            else:
+                # we could catch slur-to-rest here but we can't catch
+                # them between measures or at the end of a song so we
+                # might as well leave them for elsewhere
+
+                yield note
+                position += note.duration
+                previous = None
+
+
 @dataclass(frozen=True)
 class Part:
     """
@@ -178,101 +377,9 @@ class Part:
     time: TimeSignature
     tempo: int
     dynamic: Dynamic
-    measures: list[list[Note | Rest]]
+    measures: list[Measure | list[Note | Rest]]
     key: Optional[Key] = None
-    # dict key is 0-indexed measure number
-    time_changes: Optional[dict[int, TimeSignature]] = None
-    # outer key is 0-indexed measure number, inner key is measure offset:
-    key_changes: Optional[dict[int, dict[Fraction, Key]]] = None
-    tempo_changes: Optional[dict[int, dict[Fraction, int]]] = None
-    dynamic_changes: Optional[dict[int, dict[Fraction, Dynamic]]] = None
-    # This should eventually be rolled in with tempo as part of the mood
-    # of the piece. As it is, this is a sort of hacky solution for
-    # processing all temporal properties of accents prior to throwing
-    # information about note size away when converting from notes to
-    # durations. 0 / 1 will make all notes last the entirety of their
-    # space (which is what tenuto and slur do regardless). This fraction
-    # is how much to reduce the length of a standard note as a fraction
-    # of the smaller of the note's length or the length of a standard
-    # note (e.g., if the part is in X/4 time, any notes smaller than a
-    # quarter note will be reduced by their length * this factor.
-    # Larger notes like a whole note will only be reduces by the length
-    # of a quarter note * this factor). Look, if you're actually
-    # fiddling with this directly just scroll down to where this value
-    # is used.
-    _tailoff_factor: Fraction = Fraction(1, 4)
-
-    # Where should this method actually live
-    @classmethod
-    def validate_accent(
-        cls,
-        note: Note,
-        beat_size: Fraction,
-        previous: Optional[Accent] = None,
-    ):
-        """
-        Raise an error if a note has an accent that is not allowed.
-
-        Only TENUTO/SLUR is allowed after a SLUR or if the note is
-        longer than beat size.
-
-        note: The note whos accent is beign checked
-        previous: The accent of the previous note
-        beat_size: The base beat size. If note supplied, will be
-            calculated from starting time signature.
-        """
-        if note.accent:
-            minimal = {Accent.TENUTO, Accent.SLUR}
-
-            if previous == Accent.SLUR and note.accent not in minimal:
-                raise ValueError(
-                    f"Accent {note.accent.value} not allowed after a slur/tie"
-                )
-
-            if beat_size < note.duration and note.accent not in minimal:
-                raise ValueError(
-                    f"Accent {note.accent.value} not allowed on "
-                    f"notes larget than the beat size ({beat_size})"
-                )
-
-    # This should move to the class that represents tone (as in feeling)
-    def adjust_duration(self, note: Note, beat_size: Fraction) -> Note:
-        """
-        Replace a note with any accents modifying duration with a note
-        of a new duration and without that accent.
-
-        note: The note to adjust
-        beat_size: How long a beat is.
-        """
-        duration = note.duration
-        pitch = note.pitch
-        dynamic = note.dynamic
-        accent = note.accent
-        regular_length = True
-
-        if accent in (Accent.MARCATO, Accent.STACCATO):
-            duration /= 2
-
-            if accent == Accent.MARCATO:
-                accent = Accent.ACCENT
-            else:
-                accent = None
-
-            regular_length = False
-        elif accent == Accent.STACCATISSIMO:
-            duration /= 4
-            accent = None
-            regular_length = False
-        elif accent == Accent.TENUTO:
-            accent = None
-            regular_length = False
-        elif accent == Accent.SLUR:
-            regular_length = False
-
-        if regular_length:
-            duration -= min(beat_size, duration) * self._tailoff_factor
-
-        return Note(duration, pitch, dynamic, accent)
+    _tailoff_factor: Fraction = TAILOFF_FACTOR
 
     def tones(
         self,
@@ -286,94 +393,67 @@ class Part:
 
         sample_rate: how many samples the recording will use for each second.
         """
-
-        time_changes = self.time_changes or {}
-        key_changes = self.key_changes or {}
-        tempo_changes = self.tempo_changes or {}
-        dynamic_changes = self.dynamic_changes or {}
-
-        key = self.key
-
-        beat_size = Fraction(1, self.time.beat_size)
-        tempo = self.tempo
-        dynamic = self.dynamic
+        state = State(
+            self.time, self.tempo, self.dynamic, self.key, self._tailoff_factor
+        )
 
         previous_accent = None
         tied_index = 0
         tied_tone = None
 
-        samples_per_beat = round(sample_rate * 60 / tempo)
+        samples_per_minute = sample_rate * 60
+        tempo = state.tempo
+        samples_per_beat = round(samples_per_minute / tempo)
 
         index = 0
-        for measure, notes in enumerate(self.measures):
-            if measure in time_changes:
-                beat_size = Fraction(1, time_changes[measure].beat_size)
+        for measure_index, measure in enumerate(self.measures):
+            if not isinstance(measure, Measure):
+                measure = Measure(measure)
 
-            measure_key_changes = sorted(key_changes.get(measure, {}).items())
-            measure_tempo_changes = sorted(tempo_changes.get(measure, {}).items())
-            measure_dynamic_changes = sorted(dynamic_changes.get(measure, {}).items())
+            try:
+                for note in measure.play(state, previous_accent):
+                    if tempo != state.tempo:
+                        tempo = state.tempo
+                        samples_per_beat = round(samples_per_minute / tempo)
 
-            position = Fraction(0, 1)
-            if measure_key_changes and measure_key_changes[0][0] == position:
-                key = measure_key_changes.pop(0)[1]
-
-            if measure_tempo_changes and measure_tempo_changes[0][0] == position:
-                tempo = measure_tempo_changes.pop(0)[1]
-                samples_per_beat = round(sample_rate * 60 / tempo)
-
-            if measure_dynamic_changes and measure_dynamic_changes[0][0] == position:
-                dynamic = measure_dynamic_changes.pop(0)[1]
-
-            for note_or_rest in notes:
-                try:
-                    full_samples = samples = round(
-                        samples_per_beat * beat_size.denominator * note_or_rest.duration
+                    samples = round(
+                        samples_per_beat
+                        * state.time.beat_size.denominator
+                        * note.duration
                     )
 
-                    if isinstance(note_or_rest, Rest):
+                    if isinstance(note, Rest):
                         if tied_tone is not None:
                             raise ValueError("Cannot slur/tie into a rest")
 
                         previous_accent = None
                     else:
-                        self.validate_accent(
-                            note_or_rest, beat_size=beat_size, previous=previous_accent
-                        )
-                        note = self.adjust_duration(note_or_rest, beat_size)
-
-                        if key:
-                            pitch = key.in_key(note.pitch)
-                        else:
-                            pitch = note.pitch
-
-                        if note.duration != note_or_rest.duration:
-                            samples = round(
-                                samples_per_beat * beat_size.denominator * note.duration
-                            )
-
                         tone = Tone(
                             samples,
-                            pitch,
-                            note.dynamic or dynamic,
+                            note.pitch,
+                            # We know measure is supplying the dynamic
+                            cast(Dynamic, note.dynamic),
                             note.accent,
                         )
 
                         start_index = index
                         if tied_tone:
-                            if tied_tone.pitch != pitch:
+                            if tied_tone.pitch != tone.pitch:
                                 # It was a slur not a tie
                                 yield tied_index, tied_tone
                                 tied_tone = None
                             else:
                                 tone = Tone(
                                     tied_tone.duration + tone.duration,
-                                    tied_tone.pitch,
+                                    tone.pitch,
+                                    # If there's a dynamic change over a tied
+                                    # note we're currently ignoring it. sorry
                                     tied_tone.dynamic,
                                     tone.accent,
                                 )
                                 start_index = tied_index
 
-                        if note.accent == Accent.SLUR:
+                        if tone.accent == Accent.SLUR:
                             if tied_tone is None:
                                 tied_index = index
                             tied_tone = tone
@@ -381,46 +461,16 @@ class Part:
                             tied_tone = None
                             yield start_index, tone
 
-                        previous_accent = note.accent
+                        previous_accent = tone.accent
 
-                    position += note_or_rest.duration
-                    index += full_samples
-
-                    if measure_key_changes:
-                        if measure_key_changes[0][0] < position:
-                            raise ValueError(
-                                f"Key change at {measure}: "
-                                f"{measure_key_changes[0][0]} falls within a note"
-                            )
-                        elif measure_key_changes[0][0] == position:
-                            key = measure_key_changes.pop(0)[1]
-
-                    if measure_tempo_changes:
-                        if measure_tempo_changes[0][0] < position:
-                            raise ValueError(
-                                f"Tempo change at {measure}: "
-                                f"{measure_tempo_changes[0][0]} falls within a note"
-                            )
-                        elif measure_tempo_changes[0][0] == position:
-                            tempo = measure_tempo_changes.pop(0)[1]
-                            samples_per_beat = round(sample_rate * 60 / tempo)
-
-                    if measure_dynamic_changes:
-                        if measure_dynamic_changes[0][0] < position:
-                            raise ValueError(
-                                f"Dynamic change at {measure}: "
-                                f"{measure_dynamic_changes[0][0]} falls within a note"
-                            )
-                        elif measure_dynamic_changes[0][0] == position:
-                            dynamic = measure_dynamic_changes.pop(0)[1]
-
-                except Exception:
-                    # TODO: proper logging
-                    print(f"Error occured at: {measure}: {position}")
-                    raise
+                    index += samples
+            except Exception:
+                # TODO: proper logging
+                print(f"Error occured at measure {measure}:")
+                raise
 
         if tied_tone:
             raise ValueError("Hanging slur/tie at end of part")
 
 
-__all__ = ("KEYS", "Key", "Part", "Tempo", "TimeSignature")
+__all__ = ("KEYS", "Key", "Measure", "Part", "Tempo", "TimeSignature")

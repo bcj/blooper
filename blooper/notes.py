@@ -12,17 +12,46 @@ from typing import Optional
 
 from blooper.pitch import Pitch
 
+# This should eventually be rolled in with tempo as part of the mood of
+# the piece. As it is, this is a sort of hacky solution for processing
+# all temporal properties of accents prior to throwing information about
+# note size away when converting from notes to durations. 0 / 1 will
+# make all notes last the entirety of their space (which is what tenuto
+# and slur do regardless). This fraction is how much to reduce the
+# length of a standard note as a fraction of the smaller of the note's
+# length or the length of a standard note (e.g., if the part is in X/4
+# time, any notes smaller than a quarter note will be reduced by their
+# length * this factor. Larger notes like a whole note will only be
+# reduces by the length of a quarter note * this factor). Look, if
+# you're actually fiddling with this directly just scroll down to where
+# this value is used.
+TAILOFF_FACTOR = Fraction(1, 4)
+
 
 class Accent(Enum):
     ACCENT = ">"  # strong then quickly back off
     MARCATO = "^"  # accent + staccato
+    SLUR = "⁔"
     STACCATO = "."  # half duration
     STACCATISSIMO = "▾"  # quarter duration
     TENUTO = "-"  # full length
-    SLUR = "⁔"
     # Wow, how are we going to do this? With Gliss we'll have the
     # preceding note and can look ahead or something. Hmm.
     # TREMOLO = "≋"
+
+    def can_follow(self, previous: Optional[Accent] = None) -> bool:
+        """
+        Check whether an accent can immediately follow a note with
+        another accent.
+        """
+        return previous != Accent.SLUR or self in (Accent.TENUTO, Accent.SLUR)
+
+    def long(self) -> bool:
+        """
+        Check whether the accent is allowed on notes larger than the
+        beat size.
+        """
+        return self in (Accent.SLUR, Accent.TENUTO)
 
 
 @dataclass(frozen=True)
@@ -128,6 +157,45 @@ class Note:
     # going forward and will be played at the piece's current dynamic.
     dynamic: Optional[Dynamic] = None
     accent: Optional[Accent] = None
+
+    def components(
+        self,
+        beat_size: Fraction,
+        *,
+        tailoff_factor: Fraction = TAILOFF_FACTOR,
+    ) -> tuple[Fraction, Pitch, Optional[Dynamic], Optional[Accent]]:
+        """
+        Get the components of a note, resolving any temporal accents by
+        changing the duration.
+        """
+        duration = self.duration
+        accent = self.accent
+
+        regular_length = True
+
+        if accent in (Accent.MARCATO, Accent.STACCATO):
+            duration /= 2
+
+            if accent == Accent.MARCATO:
+                accent = Accent.ACCENT
+            else:
+                accent = None
+
+            regular_length = False
+        elif accent == Accent.STACCATISSIMO:
+            duration /= 4
+            accent = None
+            regular_length = False
+        elif accent == Accent.TENUTO:
+            accent = None
+            regular_length = False
+        elif accent == Accent.SLUR:
+            regular_length = False
+
+        if regular_length:
+            duration -= min(beat_size, duration) * tailoff_factor
+
+        return duration, self.pitch, self.dynamic, accent
 
 
 @dataclass(frozen=True)

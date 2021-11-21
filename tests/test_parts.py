@@ -5,7 +5,7 @@ import pytest
 
 def test_key():
     from blooper.parts import Key
-    from blooper.pitch import FLAT, NATURAL, SHARP
+    from blooper.pitch import FLAT, NATURAL, SHARP, Pitch
 
     key = Key("C", True, {})
 
@@ -85,270 +85,445 @@ def test_key():
     with pytest.raises(ValueError):
         Key.new("B", False, flats=("B", "D", "E", "G", "A", "A"))
 
+    sharps = ("A", "B", "C")
+    flats = ("D", "E")
+    key = Key.new("X", False, sharps=sharps, flats=flats)
+    for pitch_class in "ABCDEF":
+        for accidental in (FLAT, NATURAL, SHARP):
+            pitch = Pitch(4, pitch_class, accidental)
+            assert key.in_key(pitch) == pitch
+
+    for pitch_class in sharps:
+        assert key.in_key(Pitch(3, pitch_class)) == Pitch(3, pitch_class, SHARP)
+
+    for pitch_class in flats:
+        assert key.in_key(Pitch(3, pitch_class)) == Pitch(3, pitch_class, FLAT)
+
+    key.in_key(Pitch(3, "f")) == Pitch(3, "f", NATURAL)
+
 
 def test_time_signature():
     from blooper.parts import TimeSignature
 
-    assert TimeSignature(4, 4) != TimeSignature(1, 1)
-    assert str(TimeSignature(4, 4)) == "4/4"
-    assert str(TimeSignature(3, 4)) == "3/4"
-    assert str(TimeSignature(7, 8)) == "7/8"
+    assert TimeSignature.new(4, 4) != TimeSignature.new(1, 1)
+    assert str(TimeSignature.new(4, 4)) == "4/4"
+    assert str(TimeSignature.new(3, 4)) == "3/4"
+    assert str(TimeSignature.new(7, 8)) == "7/8"
 
 
-def test_part_validate_accent():
-    from blooper.notes import Accent, Note
-    from blooper.parts import Part
-    from blooper.pitch import Pitch
+def test_measure():
+    from blooper.notes import Accent, Dynamic, Note, Rest
+    from blooper.parts import KEYS, Key, Measure, State, Tempo, TimeSignature
+    from blooper.pitch import FLAT, NATURAL, SHARP, Pitch
 
-    duration = Fraction(1, 4)
-    long_duration = Fraction(1, 2)
-    pitch = Pitch(4, "A")
-    beat_size = Fraction(1, 4)
-    long_beat_size = Fraction(1, 2)
+    assert Measure().notes == []
+    assert Measure((Rest(Fraction(x, 4)) for x in range(1, 4))).notes == [
+        Rest(Fraction(1, 4)),
+        Rest(Fraction(2, 4)),
+        Rest(Fraction(3, 4)),
+    ]
 
-    minimal = {None, Accent.TENUTO, Accent.SLUR}
-    for accent in (None, *iter(Accent)):
-        for previous in (None, *iter(Accent)):
-            if previous == Accent.SLUR:
-                if accent in minimal:
-                    Part.validate_accent(
-                        Note(duration, pitch, accent=accent), beat_size, previous
-                    )
-                else:
-                    with pytest.raises(ValueError):
-                        Part.validate_accent(
-                            Note(duration, pitch, accent=accent), beat_size, previous
-                        )
-            else:
-                Part.validate_accent(
-                    Note(duration, pitch, accent=accent), beat_size, previous
-                )
-                Part.validate_accent(
-                    Note(duration, pitch, accent=accent), long_beat_size, previous
-                )
-                Part.validate_accent(
-                    Note(long_duration, pitch, accent=accent), long_beat_size, previous
-                )
-
-            if accent in minimal:
-                Part.validate_accent(
-                    Note(long_duration, pitch, accent=accent), beat_size, previous
-                )
-            else:
-                with pytest.raises(ValueError):
-                    Part.validate_accent(
-                        Note(long_duration, pitch, accent=accent), beat_size, previous
-                    )
-
-
-def test_part_adjust_duration():
-    from blooper.notes import Accent, Dynamic, Note
-    from blooper.parts import Key, Part, TimeSignature
-    from blooper.pitch import Pitch
-
-    pitch = Pitch(4, "A")
-
-    # this would be a classmethod but we want to make it easy to change
-    # tailoff factor. As such, we can just pass garbage for all this.
-    # Maybe there's some bigger lesson about this class. hmm.
-    part = Part(TimeSignature(4, 4), 120, Dynamic.from_symbol("mf"), [])
-
-    half_note = Fraction(1, 2)
-    quarter_note = Fraction(1, 4)
-    eighth_note = Fraction(1, 8)
-
+    piano = Dynamic.from_symbol("p")
+    mezzo_forte = Dynamic.from_symbol("mf")
     forte = Dynamic.from_symbol("f")
 
-    # no accent and Accent.Accent means 3/4 length (kind of)
-    for accent in (None, Accent.ACCENT):
-        assert part.adjust_duration(
-            Note(half_note, pitch, accent=accent), quarter_note
-        ) == Note(Fraction(7, 16), pitch, accent=accent)
-        assert part.adjust_duration(
-            Note(quarter_note, pitch, accent=accent), quarter_note
-        ) == Note(Fraction(3, 16), pitch, accent=accent)
-        assert part.adjust_duration(
-            Note(eighth_note, pitch, accent=accent, dynamic=forte), quarter_note
-        ) == Note(Fraction(3, 32), pitch, accent=accent, dynamic=forte)
-
-    # MARCATO is STACCATO + ACCENT
-    assert part.adjust_duration(
-        Note(half_note, pitch, accent=Accent.MARCATO), quarter_note
-    ) == Note(Fraction(1, 4), pitch, accent=Accent.ACCENT)
-    assert part.adjust_duration(
-        Note(quarter_note, pitch, accent=Accent.MARCATO), quarter_note
-    ) == Note(Fraction(1, 8), pitch, accent=Accent.ACCENT)
-    assert part.adjust_duration(
-        Note(eighth_note, pitch, accent=Accent.MARCATO), quarter_note
-    ) == Note(Fraction(1, 16), pitch, accent=Accent.ACCENT)
-
-    assert part.adjust_duration(
-        Note(half_note, pitch, accent=Accent.STACCATO), quarter_note
-    ) == Note(Fraction(1, 4), pitch)
-    assert part.adjust_duration(
-        Note(quarter_note, pitch, accent=Accent.STACCATO), quarter_note
-    ) == Note(Fraction(1, 8), pitch)
-    assert part.adjust_duration(
-        Note(eighth_note, pitch, accent=Accent.STACCATO), quarter_note
-    ) == Note(Fraction(1, 16), pitch)
-
-    assert part.adjust_duration(
-        Note(half_note, pitch, accent=Accent.STACCATISSIMO), quarter_note
-    ) == Note(Fraction(1, 8), pitch)
-    assert part.adjust_duration(
-        Note(quarter_note, pitch, accent=Accent.STACCATISSIMO), quarter_note
-    ) == Note(Fraction(1, 16), pitch)
-    assert part.adjust_duration(
-        Note(eighth_note, pitch, accent=Accent.STACCATISSIMO), quarter_note
-    ) == Note(Fraction(1, 32), pitch)
-
-    assert part.adjust_duration(
-        Note(half_note, pitch, accent=Accent.TENUTO), quarter_note
-    ) == Note(half_note, pitch)
-    assert part.adjust_duration(
-        Note(quarter_note, pitch, accent=Accent.TENUTO), quarter_note
-    ) == Note(quarter_note, pitch)
-    assert part.adjust_duration(
-        Note(eighth_note, pitch, accent=Accent.TENUTO), quarter_note
-    ) == Note(eighth_note, pitch)
-
-    assert part.adjust_duration(
-        Note(half_note, pitch, accent=Accent.SLUR), quarter_note
-    ) == Note(half_note, pitch, accent=Accent.SLUR)
-    assert part.adjust_duration(
-        Note(quarter_note, pitch, accent=Accent.SLUR), quarter_note
-    ) == Note(quarter_note, pitch, accent=Accent.SLUR)
-    assert part.adjust_duration(
-        Note(eighth_note, pitch, accent=Accent.SLUR), quarter_note
-    ) == Note(eighth_note, pitch, accent=Accent.SLUR)
-
-    # different beat size
-    assert part.adjust_duration(Note(half_note, pitch), eighth_note) == Note(
-        Fraction(15, 32), pitch
+    # add
+    measure = Measure([Note(Fraction(1, 4), Pitch(4, "A"))])
+    measure.add(Note(Fraction(1, 4), Pitch(4, "B")))
+    assert measure.notes == [
+        Note(Fraction(1, 4), Pitch(4, "A")),
+        Note(Fraction(1, 4), Pitch(4, "B")),
+    ]
+    measure.add(
+        Note(Fraction(1, 8), Pitch(4, "A")),
+        key=Key.new("A", True, flats=("A",)),
+        tempo=Tempo.LARGHETO,
+        dynamic=forte,
     )
-    assert part.adjust_duration(Note(quarter_note, pitch), eighth_note) == Note(
-        Fraction(7, 32), pitch
-    )
-    assert part.adjust_duration(Note(eighth_note, pitch), eighth_note) == Note(
-        Fraction(3, 32), pitch
-    )
+    assert measure.notes == [
+        Note(Fraction(1, 4), Pitch(4, "A")),
+        Note(Fraction(1, 4), Pitch(4, "B")),
+        Note(Fraction(1, 8), Pitch(4, "A")),
+    ]
+    assert measure.keys == {Fraction(1, 2): Key.new("A", True, flats=("A",))}
+    assert measure.tempos == {Fraction(1, 2): Tempo.LARGHETO}
+    assert measure.dynamics == {Fraction(1, 2): forte}
 
-    assert part.adjust_duration(
-        Note(half_note, pitch, accent=Accent.MARCATO), eighth_note
-    ) == Note(Fraction(1, 4), pitch, accent=Accent.ACCENT)
-    assert part.adjust_duration(
-        Note(quarter_note, pitch, accent=Accent.MARCATO), eighth_note
-    ) == Note(Fraction(1, 8), pitch, accent=Accent.ACCENT)
-    assert part.adjust_duration(
-        Note(eighth_note, pitch, accent=Accent.MARCATO), eighth_note
-    ) == Note(Fraction(1, 16), pitch, accent=Accent.ACCENT)
+    # position
+    assert Measure._position(TimeSignature.new(4, 4), Fraction(0, 1)) == "0"
+    assert Measure._position(TimeSignature.new(4, 4), Fraction(1, 4)) == "1"
+    assert Measure._position(TimeSignature.new(4, 4), Fraction(2, 4)) == "2"
+    assert Measure._position(TimeSignature.new(4, 4), Fraction(1, 8)) == "0 + 1/8"
+    assert Measure._position(TimeSignature.new(4, 4), Fraction(5, 8)) == "2 + 1/8"
 
-    # different drop-off
-    part = Part(
-        TimeSignature(4, 4),
+    # basic play
+    notes = [
+        Note(Fraction(1, 4), Pitch(4, "A")),
+        Note(Fraction(1, 4), Pitch(4, "B"), forte),
+        Note(Fraction(1, 8), Pitch(4, "A", SHARP)),
+        Note(Fraction(1, 8), Pitch(4, "A")),
+    ]
+    assert list(
+        Measure(notes).play(
+            State(
+                TimeSignature.new(4, 4),
+                120,
+                mezzo_forte,
+                tailoff_factor=Fraction(0, 1),
+            ),
+        )
+    ) == [
+        Note(Fraction(1, 4), Pitch(4, "A", NATURAL), mezzo_forte),
+        Note(Fraction(1, 4), Pitch(4, "B", NATURAL), forte),
+        Note(Fraction(1, 8), Pitch(4, "A", SHARP), mezzo_forte),
+        Note(Fraction(1, 8), Pitch(4, "A", NATURAL), mezzo_forte),
+        Rest(Fraction(1, 4)),
+    ]
+
+    assert list(
+        Measure(
+            notes,
+            time=TimeSignature.new(5, 4),
+            dynamics={Fraction(1, 4): piano},
+            keys={Fraction(1, 2): KEYS["C Major"]},
+        ).play(
+            State(
+                TimeSignature.new(4, 4),
+                120,
+                mezzo_forte,
+                KEYS["A♭ Major"],
+                tailoff_factor=Fraction(0, 1),
+            ),
+        )
+    ) == [
+        Note(Fraction(1, 4), Pitch(4, "A", FLAT), mezzo_forte),
+        Note(Fraction(1, 4), Pitch(4, "B", FLAT), forte),
+        Note(Fraction(1, 8), Pitch(4, "A", SHARP), piano),
+        Note(Fraction(1, 8), Pitch(4, "A", NATURAL), piano),
+        Rest(Fraction(1, 2)),
+    ]
+
+    # state changes
+    state = State(
+        TimeSignature.new(4, 4),
         120,
-        Dynamic.from_symbol("mf"),
-        [],
-        Key.new("A", True),
-        _tailoff_factor=Fraction(3, 16),
+        mezzo_forte,
+        KEYS["A♭ Major"],
+        tailoff_factor=Fraction(0, 1),
     )
-    assert part.adjust_duration(Note(half_note, pitch), quarter_note) == Note(
-        Fraction(29, 64), pitch
-    )
-    assert part.adjust_duration(Note(quarter_note, pitch), quarter_note) == Note(
-        Fraction(13, 64), pitch
-    )
-    assert part.adjust_duration(Note(eighth_note, pitch), quarter_note) == Note(
-        Fraction(13, 128), pitch
-    )
+    iterator = Measure(
+        notes,
+        time=TimeSignature.new(3, 4),
+        tempos={Fraction(1, 4): 240, Fraction(5, 8): 60},
+        dynamics={Fraction(0, 4): forte, Fraction(1, 4): piano},
+        keys={
+            Fraction(1, 4): KEYS["C Major"],
+            Fraction(1, 2): KEYS["C Minor"],
+        },
+    ).play(state)
 
-    # 0 drop off
-    part = Part(
-        TimeSignature(4, 4),
-        120,
-        Dynamic.from_symbol("mf"),
-        [],
-        _tailoff_factor=Fraction(0, 1),
+    assert next(iterator).duration == Fraction(1, 4)
+    assert state.time == TimeSignature.new(3, 4)
+    assert state.tempo == 120
+    assert state.dynamic == forte
+    assert state.key == KEYS["A♭ Major"]
+
+    assert next(iterator).duration == Fraction(1, 4)
+    assert state.time == TimeSignature.new(3, 4)
+    assert state.tempo == 240
+    assert state.dynamic == piano
+    assert state.key == KEYS["C Major"]
+
+    assert next(iterator).duration == Fraction(1, 8)
+    assert state.time == TimeSignature.new(3, 4)
+    assert state.tempo == 240
+    assert state.dynamic == piano
+    assert state.key == KEYS["C Minor"]
+
+    assert next(iterator).duration == Fraction(1, 8)
+    assert state.time == TimeSignature.new(3, 4)
+    assert state.tempo == 60
+    assert state.dynamic == piano
+    assert state.key == KEYS["C Minor"]
+
+    # illicit changes
+
+    # time too short
+    iterator = Measure(notes, time=TimeSignature.new(1, 2)).play(
+        State(
+            TimeSignature.new(4, 4),
+            120,
+            mezzo_forte,
+            KEYS["A♭ Major"],
+            tailoff_factor=Fraction(0, 1),
+        )
     )
-    assert part.adjust_duration(Note(half_note, pitch), quarter_note) == Note(
-        half_note, pitch
-    )
-    assert part.adjust_duration(Note(quarter_note, pitch), quarter_note) == Note(
-        quarter_note, pitch
-    )
-    assert part.adjust_duration(Note(eighth_note, pitch), quarter_note) == Note(
-        eighth_note, pitch
-    )
+    with pytest.raises(ValueError):
+        next(iterator)
+
+    # before, mid-note, after-measure
+    for skips, fraction in (
+        (0, Fraction(-1, 2)),
+        (1, Fraction(1, 8)),
+        (4, Fraction(1, 1)),
+    ):
+        tempo_iterator = Measure(notes, tempos={fraction: 100}).play(
+            State(
+                TimeSignature.new(4, 4),
+                120,
+                mezzo_forte,
+                KEYS["A♭ Major"],
+                tailoff_factor=Fraction(0, 1),
+            )
+        )
+        dynamic_iterator = Measure(notes, dynamics={fraction: piano}).play(
+            State(
+                TimeSignature.new(4, 4),
+                120,
+                mezzo_forte,
+                KEYS["A♭ Major"],
+                tailoff_factor=Fraction(0, 1),
+            )
+        )
+        key_iterator = Measure(notes, keys={fraction: KEYS["C Major"]}).play(
+            State(
+                TimeSignature.new(4, 4),
+                120,
+                mezzo_forte,
+                KEYS["A♭ Major"],
+                tailoff_factor=Fraction(0, 1),
+            )
+        )
+
+        for _ in range(skips):
+            next(tempo_iterator)
+            next(dynamic_iterator)
+            next(key_iterator)
+
+        with pytest.raises(ValueError):
+            next(tempo_iterator)
+
+        with pytest.raises(ValueError):
+            next(dynamic_iterator)
+
+        with pytest.raises(ValueError):
+            next(key_iterator)
+
+    # accent
+
+    # easy mode
+    assert list(
+        Measure(
+            [
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.ACCENT),
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.MARCATO),
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.SLUR),
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=None),
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.STACCATO),
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.STACCATISSIMO),
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.TENUTO),
+                Note(Fraction(2, 4), Pitch(4, "A"), accent=None),
+            ]
+        ).play(
+            State(
+                TimeSignature.new(9, 4),
+                120,
+                mezzo_forte,
+                KEYS["A♭ Major"],
+                tailoff_factor=Fraction(0, 1),
+            )
+        )
+    ) == [
+        Note(Fraction(1, 4), Pitch(4, "A", FLAT), mezzo_forte, Accent.ACCENT),
+        Note(Fraction(1, 8), Pitch(4, "A", FLAT), mezzo_forte, Accent.ACCENT),
+        Rest(Fraction(1, 8)),
+        Note(Fraction(1, 4), Pitch(4, "A", FLAT), mezzo_forte, Accent.SLUR),
+        Note(Fraction(1, 4), Pitch(4, "A", FLAT), mezzo_forte, None),
+        Note(Fraction(1, 8), Pitch(4, "A", FLAT), mezzo_forte, None),
+        Rest(Fraction(1, 8)),
+        Note(Fraction(1, 16), Pitch(4, "A", FLAT), mezzo_forte, None),
+        Rest(Fraction(3, 16)),
+        Note(Fraction(1, 4), Pitch(4, "A", FLAT), mezzo_forte, None),
+        Note(Fraction(1, 2), Pitch(4, "A", FLAT), mezzo_forte, None),
+    ]
+
+    # with tail-off
+    assert list(
+        Measure(
+            [
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.ACCENT),
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.MARCATO),
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.SLUR),
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=None),
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.STACCATO),
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.STACCATISSIMO),
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.TENUTO),
+                Note(Fraction(1, 2), Pitch(4, "A"), accent=None),
+            ]
+        ).play(
+            State(
+                TimeSignature.new(9, 4),
+                120,
+                mezzo_forte,
+                KEYS["A♭ Major"],
+            )
+        )
+    ) == [
+        Note(Fraction(3, 16), Pitch(4, "A", FLAT), mezzo_forte, Accent.ACCENT),
+        Rest(Fraction(1, 16)),
+        Note(Fraction(1, 8), Pitch(4, "A", FLAT), mezzo_forte, Accent.ACCENT),
+        Rest(Fraction(1, 8)),
+        Note(Fraction(1, 4), Pitch(4, "A", FLAT), mezzo_forte, Accent.SLUR),
+        Note(Fraction(3, 16), Pitch(4, "A", FLAT), mezzo_forte, None),
+        Rest(Fraction(1, 16)),
+        Note(Fraction(1, 8), Pitch(4, "A", FLAT), mezzo_forte, None),
+        Rest(Fraction(1, 8)),
+        Note(Fraction(1, 16), Pitch(4, "A", FLAT), mezzo_forte, None),
+        Rest(Fraction(3, 16)),
+        Note(Fraction(1, 4), Pitch(4, "A", FLAT), mezzo_forte, None),
+        Note(Fraction(7, 16), Pitch(4, "A", FLAT), mezzo_forte, None),
+        Rest(Fraction(1, 16)),
+    ]
+
+    # illicit accents
+
+    # should be safe unless preceded by a slur
+    measure = Measure([Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.STACCATO)])
+    assert list(
+        measure.play(State(TimeSignature.new(1, 4), 120, mezzo_forte, KEYS["A♭ Major"]))
+    ) == [
+        Note(Fraction(1, 8), Pitch(4, "A", FLAT), mezzo_forte),
+        Rest(Fraction(1, 8)),
+    ]
+    with pytest.raises(ValueError):
+        list(
+            measure.play(
+                State(TimeSignature.new(1, 4), 120, mezzo_forte, KEYS["A♭ Major"]),
+                Accent.SLUR,
+            )
+        )
+
+    assert list(
+        Measure(
+            [
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.ACCENT),
+                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.ACCENT),
+            ]
+        ).play(State(TimeSignature.new(2, 4), 120, mezzo_forte, KEYS["A♭ Major"]))
+    ) == [
+        Note(Fraction(3, 16), Pitch(4, "A", FLAT), mezzo_forte, Accent.ACCENT),
+        Rest(Fraction(1, 16)),
+        Note(Fraction(3, 16), Pitch(4, "A", FLAT), mezzo_forte, Accent.ACCENT),
+        Rest(Fraction(1, 16)),
+    ]
+    with pytest.raises(ValueError):
+        list(
+            Measure(
+                [
+                    Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.SLUR),
+                    Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.ACCENT),
+                ]
+            ).play(State(TimeSignature.new(2, 4), 120, mezzo_forte, KEYS["A♭ Major"]))
+        )
+
+    # many accents can't be long
+    for accent in (
+        Accent.ACCENT,
+        Accent.MARCATO,
+        Accent.STACCATO,
+        Accent.STACCATISSIMO,
+    ):
+        list(
+            Measure(
+                [
+                    Note(Fraction(1, 4), Pitch(4, "A"), accent=accent),
+                    Note(Fraction(1, 4), Pitch(4, "A")),
+                ]
+            ).play(State(TimeSignature.new(2, 4), 120, mezzo_forte, KEYS["A♭ Major"]))
+        )
+
+        with pytest.raises(ValueError):
+            list(
+                Measure(
+                    [
+                        Note(Fraction(1, 2), Pitch(4, "A"), accent=accent),
+                        Note(Fraction(1, 4), Pitch(4, "A")),
+                    ]
+                ).play(
+                    State(TimeSignature.new(3, 4), 120, mezzo_forte, KEYS["A♭ Major"])
+                )
+            )
 
 
 def test_part():
     from blooper.notes import Accent, Dynamic, Note, Rest, Tone
-    from blooper.parts import KEYS, Key, Part, TimeSignature
+    from blooper.parts import KEYS, Key, Measure, Part, TimeSignature
     from blooper.pitch import FLAT, NATURAL, SHARP, Pitch
 
-    common_time = TimeSignature(4, 4)
-    waltz_time = TimeSignature(3, 4)
+    common_time = TimeSignature.new(4, 4)
+    waltz_time = TimeSignature.new(3, 4)
 
     piano = Dynamic.from_symbol("p")
     mezzo_forte = Dynamic.from_symbol("mf")
     forte = Dynamic.from_symbol("f")
     fortissimo = Dynamic.from_symbol("ff")
 
-    # why no non-accented notes? this was written before no accent and
-    # Accent.ACCENT became not full-length. We do have one Accent.ACCENT
     part = Part(
         common_time,
         120,
         forte,
         [
-            [
-                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.SLUR),
-                Note(Fraction(1, 8), Pitch(4, "A"), accent=Accent.SLUR),
-                Note(Fraction(1, 8), Pitch(4, "A"), accent=Accent.TENUTO),
-                Rest(Fraction(1, 4)),
-                Rest(Fraction(1, 4)),
-            ],
-            [
-                Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.SLUR),
-                Note(Fraction(1, 8), Pitch(4, "A", SHARP), accent=Accent.TENUTO),
-                Note(
-                    Fraction(1, 8),
-                    Pitch(4, "A", SHARP),
-                    dynamic=piano,
-                    accent=Accent.MARCATO,
-                ),
-                Note(Fraction(1, 4), Pitch(4, "B"), accent=Accent.ACCENT),
-                Note(Fraction(1, 4), Pitch(4, "B", SHARP), accent=Accent.TENUTO),
-            ],
-            [
-                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
-                Note(Fraction(1, 4), Pitch(3, "F", SHARP), accent=Accent.SLUR),
-            ],
-            [
-                Note(Fraction(1, 4), Pitch(3, "F", SHARP), accent=Accent.SLUR),
-                Note(Fraction(1, 8), Pitch(3, "F", SHARP), accent=Accent.TENUTO),
-                Rest(Fraction(1, 2)),
-                Note(Fraction(1, 8), Pitch(3, "A"), accent=Accent.TENUTO),
-            ],
+            Measure(
+                [
+                    Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.SLUR),
+                    Note(Fraction(1, 8), Pitch(4, "A"), accent=Accent.SLUR),
+                    Note(Fraction(1, 8), Pitch(4, "A"), accent=Accent.TENUTO),
+                    Rest(Fraction(1, 4)),
+                    Rest(Fraction(1, 4)),
+                ],
+                # tempo change twice in one held note
+                tempos={Fraction(1, 4): 180, Fraction(3, 8): 240, Fraction(3, 4): 120},
+                # change mid-held note should be ignored until new note
+                dynamics={Fraction(1, 4): fortissimo},
+                keys={Fraction(3, 4): Key.new("A", True, flats=["A"])},
+            ),
+            Measure(
+                [
+                    Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.SLUR),
+                    Note(Fraction(1, 8), Pitch(4, "A", SHARP), accent=Accent.TENUTO),
+                    Note(
+                        Fraction(1, 8),
+                        Pitch(4, "A", SHARP),
+                        dynamic=piano,
+                        accent=Accent.MARCATO,
+                    ),
+                    Note(Fraction(1, 4), Pitch(4, "B"), accent=Accent.ACCENT),
+                    Note(Fraction(1, 4), Pitch(4, "B", SHARP), accent=Accent.TENUTO),
+                ],
+                # tempo change on note change
+                tempos={Fraction(0, 1): 60, Fraction(3, 8): 120},
+                dynamics={Fraction(1, 4): mezzo_forte},
+                keys={Fraction(1, 4): KEYS["C Major"]},
+            ),
+            Measure(
+                [
+                    Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
+                    Note(Fraction(1, 4), Pitch(3, "F", SHARP), accent=Accent.SLUR),
+                ],
+                time=waltz_time,
+            ),
+            Measure(
+                [
+                    Note(Fraction(1, 4), Pitch(3, "F", SHARP), accent=Accent.SLUR),
+                    Note(Fraction(1, 8), Pitch(3, "F", SHARP), accent=Accent.TENUTO),
+                    Rest(Fraction(1, 2)),
+                    Note(Fraction(1, 8), Pitch(3, "A"), accent=Accent.TENUTO),
+                ],
+                time=common_time,
+                keys={Fraction(0, 1): Key.new("A", True, flats=["A"])},
+            ),
         ],
         KEYS["C Major"],
-        time_changes={2: waltz_time, 3: common_time},
-        key_changes={
-            0: {Fraction(3, 4): Key.new("A", True, flats=["A"])},
-            1: {Fraction(1, 4): KEYS["C Major"]},
-            3: {Fraction(0, 1): Key.new("A", True, flats=["A"])},
-        },
-        tempo_changes={
-            # tempo change twice in one held note
-            0: {Fraction(1, 4): 180, Fraction(3, 8): 240, Fraction(3, 4): 120},
-            # tempo change on note change
-            1: {Fraction(0, 1): 60, Fraction(3, 8): 120},
-        },
-        dynamic_changes={
-            # change mid-held note should be ignored until new note
-            0: {Fraction(1, 4): fortissimo},
-            1: {Fraction(1, 4): mezzo_forte},
-        },
     )
 
     tones = list(part.tones(30_000))
@@ -366,205 +541,85 @@ def test_part():
         (226_250, Tone(7_500, Pitch(3, "A", FLAT), mezzo_forte)),
     ]
 
-    # illegal music
-
-    # tempo/dynamic changes in notes
-    # make sure it works right first
-    part = Part(
-        common_time,
-        120,
-        forte,
-        [
+    # slurs can't be followed by rests
+    list(
+        Part(
+            waltz_time,
+            120,
+            forte,
             [
-                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
-                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
-            ]
-        ],
-        tempo_changes={0: {Fraction(1, 2): 240}},
-        dynamic_changes={0: {Fraction(1, 2): fortissimo}},
-    )
-
-    # You may be thinking: hey, this is a weird way to write this. It is.
-    # Catching a tempo/dynamic change that happens in a note happens
-    # after we've already yeilded the tone in question. We would need to
-    # either duplicate this check (because yielding a note only happens
-    # in one of 3 cases [no yield on rests/ties]) and/or we'd miss it
-    # happening in the very last note of a part. If we ever need to
-    # guarantee all supplied tones prior to a crash are correct we will
-    # need to duplicate but not yet.
-    generator = part.tones(30_000)
-    assert next(generator) == (0, Tone(30_000, Pitch(3, "A"), forte))
-    assert next(generator) == (30_000, Tone(15_000, Pitch(3, "A"), fortissimo))
-    with pytest.raises(StopIteration):
-        next(generator)
-
-    # don't change key within a note
-    part = Part(
-        common_time,
-        120,
-        forte,
-        [
-            [
-                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
-                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
-            ]
-        ],
-        key_changes={0: {Fraction(3, 4): KEYS["F Minor"]}},
-    )
-    generator = part.tones(30_000)
-    assert next(generator) == (0, Tone(30_000, Pitch(3, "A"), forte))
-    next(generator)  # will be wrong. we don't care, it will crash next iteration
-    with pytest.raises(ValueError):
-        next(generator)
-
-    # don't change tempo within a note
-    part = Part(
-        common_time,
-        120,
-        forte,
-        [
-            [
-                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
-                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
-            ]
-        ],
-        tempo_changes={0: {Fraction(3, 4): 240}},
-        dynamic_changes={0: {Fraction(1, 2): fortissimo}},
-    )
-    generator = part.tones(30_000)
-    assert next(generator) == (0, Tone(30_000, Pitch(3, "A"), forte))
-    next(generator)  # will be wrong. we don't care, it will crash next iteration
-    with pytest.raises(ValueError):
-        next(generator)
-
-    # don't change dynamic within a note
-    part = Part(
-        common_time,
-        120,
-        forte,
-        [
-            [
-                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
-                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
-            ]
-        ],
-        tempo_changes={0: {Fraction(1, 2): 240}},
-        dynamic_changes={0: {Fraction(3, 4): fortissimo}},
-    )
-    generator = part.tones(30_000)
-    assert next(generator) == (0, Tone(30_000, Pitch(3, "A"), forte))
-    next(generator)  # will be wrong. we don't care, it will crash next iteration
-    with pytest.raises(ValueError):
-        next(generator)
-
-    # misplaced accents
-    # make sure it works
-    part = Part(
-        common_time,
-        120,
-        forte,
-        [
-            [
-                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
-                Rest(Fraction(1, 4)),
-                Note(Fraction(1, 8), Pitch(3, "A"), accent=Accent.SLUR),
-                Note(Fraction(1, 8), Pitch(3, "A"), accent=Accent.TENUTO),
+                [
+                    Note(Fraction(1, 4), Pitch(4, "A")),
+                    Rest(Fraction(1, 4)),
+                    Note(Fraction(1, 4), Pitch(4, "A")),
+                ],
+                [
+                    Rest(Fraction(1, 4)),
+                    Note(Fraction(1, 2), Pitch(4, "A")),
+                ],
             ],
-            [Note(Fraction(1, 1), Pitch(3, "A"), accent=Accent.TENUTO)],
-        ],
-        dynamic_changes={1: {Fraction(0, 1): piano}},
+        ).tones(40_000)
     )
 
-    generator = part.tones(30_000)
-    assert next(generator) == (0, Tone(30_000, Pitch(3, "A"), forte))
-    assert next(generator) == (45_000, Tone(15_000, Pitch(3, "A"), forte))
-    assert next(generator) == (60_000, Tone(60_000, Pitch(3, "A"), piano))
-    with pytest.raises(StopIteration):
-        next(generator)
-
-    # can't staccato a long note
-    part = Part(
-        common_time,
-        120,
-        forte,
-        [
-            [
-                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.STACCATO),
-                Rest(Fraction(1, 4)),
-                Note(Fraction(1, 8), Pitch(3, "A"), accent=Accent.SLUR),
-                Note(Fraction(1, 8), Pitch(3, "A"), accent=Accent.TENUTO),
-            ],
-            [Note(Fraction(1, 1), Pitch(3, "A"), accent=Accent.TENUTO)],
-        ],
-        dynamic_changes={1: {Fraction(0, 1): piano}},
-    )
-
-    generator = part.tones(30_000)
+    # before rest within measure
     with pytest.raises(ValueError):
-        next(generator)
+        list(
+            Part(
+                waltz_time,
+                120,
+                forte,
+                [
+                    [
+                        Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.SLUR),
+                        Rest(Fraction(1, 4)),
+                        Note(Fraction(1, 4), Pitch(4, "A")),
+                    ],
+                    [
+                        Rest(Fraction(1, 4)),
+                        Note(Fraction(1, 2), Pitch(4, "A")),
+                    ],
+                ],
+            ).tones(40_000)
+        )
 
-    # can't slur into a rest
-    part = Part(
-        common_time,
-        120,
-        forte,
-        [
-            [
-                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.SLUR),
-                Rest(Fraction(1, 4)),
-                Note(Fraction(1, 8), Pitch(3, "A"), accent=Accent.SLUR),
-                Note(Fraction(1, 8), Pitch(3, "A"), accent=Accent.TENUTO),
-            ],
-            [Note(Fraction(1, 1), Pitch(3, "A"), accent=Accent.TENUTO)],
-        ],
-        dynamic_changes={1: {Fraction(0, 1): piano}},
-    )
-
-    generator = part.tones(30_000)
+    # before rest between measures
     with pytest.raises(ValueError):
-        next(generator)
+        list(
+            Part(
+                waltz_time,
+                120,
+                forte,
+                [
+                    [
+                        Note(Fraction(1, 4), Pitch(4, "A")),
+                        Rest(Fraction(1, 4)),
+                        Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.SLUR),
+                    ],
+                    [
+                        Rest(Fraction(1, 4)),
+                        Note(Fraction(1, 2), Pitch(4, "A")),
+                    ],
+                ],
+            ).tones(40_000)
+        )
 
-    # can't staccato after a slur
-    part = Part(
-        common_time,
-        120,
-        forte,
-        [
-            [
-                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
-                Rest(Fraction(1, 4)),
-                Note(Fraction(1, 8), Pitch(3, "A"), accent=Accent.SLUR),
-                Note(Fraction(1, 8), Pitch(3, "A"), accent=Accent.STACCATO),
-            ],
-            [Note(Fraction(1, 1), Pitch(3, "A"), accent=Accent.TENUTO)],
-        ],
-        dynamic_changes={1: {Fraction(0, 1): piano}},
-    )
-
-    generator = part.tones(30_000)
-    assert next(generator) == (0, Tone(30_000, Pitch(3, "A"), forte))
+    # end of song
     with pytest.raises(ValueError):
-        next(generator)
-
-    # can't slur off the end of the piece
-    part = Part(
-        common_time,
-        120,
-        forte,
-        [
-            [
-                Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
-                Rest(Fraction(1, 4)),
-                Note(Fraction(1, 8), Pitch(3, "A"), accent=Accent.SLUR),
-                Note(Fraction(1, 8), Pitch(3, "A"), accent=Accent.TENUTO),
-            ],
-            [Note(Fraction(1, 1), Pitch(3, "A"), accent=Accent.SLUR)],
-        ],
-        dynamic_changes={1: {Fraction(0, 1): piano}},
-    )
-
-    generator = part.tones(30_000)
-    assert next(generator) == (0, Tone(30_000, Pitch(3, "A"), forte))
-    assert next(generator) == (45_000, Tone(15_000, Pitch(3, "A"), forte))
-    with pytest.raises(ValueError):
-        next(generator)
+        list(
+            Part(
+                waltz_time,
+                120,
+                forte,
+                [
+                    [
+                        Note(Fraction(1, 4), Pitch(4, "A")),
+                        Rest(Fraction(1, 4)),
+                        Note(Fraction(1, 4), Pitch(4, "A")),
+                    ],
+                    [
+                        Rest(Fraction(1, 4)),
+                        Note(Fraction(1, 2), Pitch(4, "A"), accent=Accent.SLUR),
+                    ],
+                ],
+            ).tones(40_000)
+        )

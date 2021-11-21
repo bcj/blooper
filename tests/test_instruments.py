@@ -77,7 +77,7 @@ def test_synthesizer():
 
     tuning = Tuning(Pitch(0, "A"), 10)
     part = Part(
-        TimeSignature(4, 4),
+        TimeSignature.new(4, 4),
         Tempo.ALLEGRO_MODERATO,
         Dynamic.from_name("fortissimo"),
         [
@@ -276,7 +276,7 @@ def test_synthesizer():
         list(adsr.play(part, 20, channels=3))
 
     part = Part(
-        TimeSignature(2, 4),
+        TimeSignature.new(2, 4),
         Tempo.ALLEGRO_MODERATO,
         Dynamic.from_name("fortissimo"),
         [

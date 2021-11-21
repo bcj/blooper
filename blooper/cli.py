@@ -79,7 +79,7 @@ def main(input_args: Optional[list[str]] = None):
     ]
 
     part = Part(
-        TimeSignature(len(notes), 4),
+        TimeSignature.new(len(notes), 4),
         args.tempo,
         Dynamic.from_name("mezzo-forte"),
         [notes] * args.loops,
