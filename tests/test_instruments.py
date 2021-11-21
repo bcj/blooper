@@ -329,6 +329,7 @@ def test_synthesizer():
 
 def test_sampler():
     from blooper.dynamics import DynamicRange, Homogenous
+    from blooper.filetypes import UsageMetadata
     from blooper.instruments import Sampler
     from blooper.notes import Dynamic, Tone
     from blooper.pitch import Pitch, Tuning
@@ -376,26 +377,28 @@ def test_sampler():
         ):
             path = directory / name
             write_wav(path, sample_rate, [(0, 0)])
-            sample_paths[path] = frequency
+            sample_paths[path] = UsageMetadata(frequency)
 
-        assert WavSample(directory / "a3_20,000.wav") == WavSample(
-            directory / "a3_20,000.wav"
+        meta200 = UsageMetadata(200)
+        meta400 = UsageMetadata(400)
+        assert WavSample(directory / "a3_20,000.wav", meta200) == WavSample(
+            directory / "a3_20,000.wav", meta200
         )
 
         expected = {
             20_000: {
                 200: {
-                    WavSample(directory / "a3_20,000.wav"),
-                    WavSample(directory / "a3_20,000b.wav"),
+                    WavSample(directory / "a3_20,000.wav", meta200),
+                    WavSample(directory / "a3_20,000b.wav", meta200),
                 },
                 400: {
-                    WavSample(directory / "a4_20,000.wav"),
-                    WavSample(directory / "a4_20,000b.wav"),
+                    WavSample(directory / "a4_20,000.wav", meta400),
+                    WavSample(directory / "a4_20,000b.wav", meta400),
                 },
             },
             40_000: {
-                200: {WavSample(directory / "a3_40,000.wav")},
-                400: {WavSample(directory / "a4_40,000.wav")},
+                200: {WavSample(directory / "a3_40,000.wav", meta200)},
+                400: {WavSample(directory / "a4_40,000.wav", meta400)},
             },
         }
         assert Sampler.map_samples(sample_paths, "wav") == expected
@@ -424,12 +427,23 @@ def test_sampler():
                         {
                             "path": str(directory / "a3_20,000b.wav"),
                             "frequency": 200,
+                            "min-volume": "pp",
+                            "maximum-volume": "forte",
                         },
-                        {"path": "a3_40,000.wav", "frequency": 200},
+                        {
+                            "path": "a3_40,000.wav",
+                            "frequency": 200,
+                            "minimum-volume": "pianissimo",
+                            "max-volume": "f",
+                        },
                     ],
                 },
                 stream,
             )
+
+        pianissimo = Dynamic.from_symbol("pp")
+        forte = Dynamic.from_symbol("f")
+        meta200ppf = UsageMetadata(200, pianissimo, forte)
 
         sampler = Sampler.from_file(config, tuning)
         assert sampler.samples == expected
@@ -438,18 +452,18 @@ def test_sampler():
 
         # matching frequency
         assert sampler.compatible_samples(400, 10_000) == {
-            WavSample(directory / "a4_20,000.wav"),
-            WavSample(directory / "a4_20,000b.wav"),
-            WavSample(directory / "a4_40,000.wav"),
+            WavSample(directory / "a4_20,000.wav", meta400),
+            WavSample(directory / "a4_20,000b.wav", meta400),
+            WavSample(directory / "a4_40,000.wav", meta400),
         }
         assert sampler.compatible_samples(400, 20_000) == {
-            WavSample(directory / "a4_20,000.wav"),
-            WavSample(directory / "a4_20,000b.wav"),
-            WavSample(directory / "a4_40,000.wav"),
+            WavSample(directory / "a4_20,000.wav", meta400),
+            WavSample(directory / "a4_20,000b.wav", meta400),
+            WavSample(directory / "a4_40,000.wav", meta400),
         }
         assert sampler.compatible_samples(400, 30_000) == set()
         assert sampler.compatible_samples(400, 40_000) == {
-            WavSample(directory / "a4_40,000.wav"),
+            WavSample(directory / "a4_40,000.wav", meta400),
         }
 
         # out of range
@@ -459,9 +473,9 @@ def test_sampler():
         assert Sampler.from_file(
             config, tuning, max_distance=500  # actual distance is 498
         ).compatible_samples(300, 10_000) == {
-            WavSample(directory / "a4_20,000.wav"),
-            WavSample(directory / "a4_20,000b.wav"),
-            WavSample(directory / "a4_40,000.wav"),
+            WavSample(directory / "a4_20,000.wav", meta400),
+            WavSample(directory / "a4_20,000b.wav", meta400),
+            WavSample(directory / "a4_40,000.wav", meta400),
         }
 
         # wait, why didn't you just pick different samples instead of
@@ -469,13 +483,32 @@ def test_sampler():
         assert Sampler.from_file(config, tuning, max_distance=600).compatible_samples(
             282.842712474619, 10_000
         ) == {
-            WavSample(directory / "a3_20,000.wav"),
-            WavSample(directory / "a3_20,000b.wav"),
-            WavSample(directory / "a3_40,000.wav"),
-            WavSample(directory / "a4_20,000.wav"),
-            WavSample(directory / "a4_20,000b.wav"),
-            WavSample(directory / "a4_40,000.wav"),
+            WavSample(directory / "a3_20,000.wav", meta200),
+            WavSample(directory / "a3_20,000b.wav", meta200ppf),
+            WavSample(directory / "a3_40,000.wav", meta200ppf),
+            WavSample(directory / "a4_20,000.wav", meta200),
+            WavSample(directory / "a4_20,000b.wav", meta200),
+            WavSample(directory / "a4_40,000.wav", meta200),
         }
+
+        # filtering on volume
+        sampler = Sampler(
+            {
+                directory / "a3_20,000.wav": UsageMetadata(200, pianissimo, forte),
+                directory / "a3_20,000b.wav": UsageMetadata(200, pianissimo),
+                directory / "a3_40,000.wav": UsageMetadata(200, forte),
+            },
+            tuning,
+        )
+        assert 3 == len(sampler.compatible_samples(200, 20_000))
+        assert 2 == len(sampler.compatible_samples(200, 20_000, pianissimo))
+        assert 3 == len(sampler.compatible_samples(200, 20_000, forte))
+        assert 2 == len(
+            sampler.compatible_samples(200, 20_000, Dynamic.from_symbol("ff"))
+        )
+        assert 0 == len(
+            sampler.compatible_samples(200, 20_000, Dynamic.from_symbol("ppp"))
+        )
 
         # play
         paths = {}
@@ -485,7 +518,7 @@ def test_sampler():
         ):
             path = directory / f"{frequency}.wav"
             write_wav(path, 20_000, samples)
-            paths[path] = frequency
+            paths[path] = UsageMetadata(frequency)
 
         envelope = Homogenous(DynamicRange(minimum_output=1, full_output=1))
 

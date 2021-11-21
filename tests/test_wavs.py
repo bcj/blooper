@@ -177,6 +177,7 @@ def test_record():
 
 
 def test_wav_sample():
+    from blooper.filetypes import UsageMetadata
     from blooper.wavs import WavSample, record
 
     with TemporaryDirectory() as directory_name:
@@ -192,11 +193,13 @@ def test_wav_sample():
             bits_per_sample=64,
         )
 
-        sample = WavSample.from_path(path)
+        metadata = UsageMetadata(440)
+
+        sample = WavSample.from_path(path, metadata=metadata)
         assert sample.channels == 1
         assert sample.sample_rate == 1000
-        assert sample == WavSample.from_path(path)
-        assert sample != WavSample.from_path(Path("./"))
+        assert sample == WavSample.from_path(path, metadata=metadata)
+        assert sample != WavSample.from_path(Path("./"), metadata=metadata)
         assert sample != path
 
         assert repr(sample) == f"WavSample({path!r})"
@@ -233,7 +236,7 @@ def test_wav_sample():
             sample_rate=100,
             bits_per_sample=32,
         )
-        sample = WavSample.from_path(path)
+        sample = WavSample.from_path(path, metadata=metadata)
         assert sample.sample_rate == 100
         assert sample.channels == 2
 
@@ -261,7 +264,7 @@ def test_wav_sample():
 
         # Some invalid files (love to test for coverage)
         with pytest.raises(ValueError):
-            WavSample.from_path(Path(__file__)).channels
+            WavSample.from_path(Path(__file__), metadata=metadata).channels
 
         # RIFF wrong
         invalid = temp / "invalid.wav"
@@ -271,7 +274,7 @@ def test_wav_sample():
             stream.write(b"WAVE")
 
         with pytest.raises(ValueError):
-            WavSample.from_path(invalid).channels
+            WavSample.from_path(invalid, metadata=metadata).channels
 
         # WAVE wrong
         with invalid.open("wb") as stream:
@@ -280,7 +283,7 @@ def test_wav_sample():
             stream.write(b"SAVE")
 
         with pytest.raises(ValueError):
-            WavSample.from_path(invalid).channels
+            WavSample.from_path(invalid, metadata=metadata).channels
 
         # fmt wrong
         with invalid.open("wb") as stream:
@@ -292,7 +295,7 @@ def test_wav_sample():
             stream.write(struct.pack("<IhhIIhh", 16, 1, 1, 1000, 4000, 4, 32))
 
         with pytest.raises(ValueError):
-            WavSample.from_path(invalid).channels
+            WavSample.from_path(invalid, metadata=metadata).channels
 
         # only support PCM format
         with invalid.open("wb") as stream:
@@ -304,7 +307,7 @@ def test_wav_sample():
             stream.write(struct.pack("<IhhIIhh", 18, 1, 1, 1000, 4000, 4, 32))
 
         with pytest.raises(NotImplementedError):
-            WavSample.from_path(invalid).channels
+            WavSample.from_path(invalid, metadata=metadata).channels
 
         with invalid.open("wb") as stream:
             stream.write(b"RIFF")
@@ -315,7 +318,7 @@ def test_wav_sample():
             stream.write(struct.pack("<IhhIIhh", 16, 2, 1, 1000, 4000, 4, 32))
 
         with pytest.raises(NotImplementedError):
-            WavSample.from_path(invalid).channels
+            WavSample.from_path(invalid, metadata=metadata).channels
 
         # header math is wrong
         with invalid.open("wb") as stream:
@@ -327,7 +330,7 @@ def test_wav_sample():
             stream.write(struct.pack("<IhhIIhh", 16, 1, 1, 1000, 5000, 4, 32))
 
         with pytest.raises(ValueError):
-            WavSample.from_path(invalid).channels
+            WavSample.from_path(invalid, metadata=metadata).channels
 
         # valid with a section we don't add
         with path.open("wb") as stream:
@@ -349,7 +352,7 @@ def test_wav_sample():
             stream.write(struct.pack("<l", 0))
             stream.write(struct.pack("<l", 2 ** 30))
 
-        sample = WavSample.from_path(path)
+        sample = WavSample.from_path(path, metadata=metadata)
         assert sample.channels == 1
         assert round_samples(sample.load(1000, [1, 1, 1, 1])) == [
             (1,),

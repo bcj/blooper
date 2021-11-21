@@ -8,7 +8,8 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 from fractions import Fraction
-from typing import Optional
+from functools import total_ordering
+from typing import Any, Optional
 
 from blooper.pitch import Pitch
 
@@ -55,6 +56,7 @@ class Accent(Enum):
 
 
 @dataclass(frozen=True)
+@total_ordering
 class Dynamic:
     """
     How loud a note or passage is supposed to be played. positive is on
@@ -99,6 +101,12 @@ class Dynamic:
             return f"m{base}"
 
         return base * (magnitude // 10)
+
+    def __lt__(self, other: Any) -> bool:
+        if isinstance(other, Dynamic):
+            return self.value < other.value
+
+        return NotImplemented
 
     @classmethod
     def from_name(self, name: str) -> Dynamic:

@@ -105,9 +105,36 @@ def test_dynamic():
     assert Dynamic.from_symbol("fff").value == 30
     assert Dynamic.from_symbol("ffff").value == 40
 
+    assert Dynamic.from_symbol("p") < Dynamic.from_symbol("f")
+    assert Dynamic.from_symbol("pp") < Dynamic.from_symbol("p")
+    assert not (Dynamic.from_symbol("p") < Dynamic.from_symbol("p"))
+    assert not (Dynamic.from_symbol("f") < Dynamic.from_symbol("p"))
+    assert not (Dynamic.from_symbol("p") < Dynamic.from_symbol("pp"))
+
+    assert Dynamic.from_symbol("p") <= Dynamic.from_symbol("f")
+    assert Dynamic.from_symbol("pp") <= Dynamic.from_symbol("p")
+    assert Dynamic.from_symbol("p") <= Dynamic.from_symbol("p")
+    assert not (Dynamic.from_symbol("f") <= Dynamic.from_symbol("p"))
+    assert not (Dynamic.from_symbol("p") <= Dynamic.from_symbol("pp"))
+
+    assert not (Dynamic.from_symbol("p") > Dynamic.from_symbol("f"))
+    assert not (Dynamic.from_symbol("pp") > Dynamic.from_symbol("p"))
+    assert not (Dynamic.from_symbol("p") > Dynamic.from_symbol("p"))
+    assert Dynamic.from_symbol("f") > Dynamic.from_symbol("p")
+    assert Dynamic.from_symbol("p") > Dynamic.from_symbol("pp")
+
+    assert not (Dynamic.from_symbol("p") >= Dynamic.from_symbol("f"))
+    assert not (Dynamic.from_symbol("pp") >= Dynamic.from_symbol("p"))
+    assert Dynamic.from_symbol("p") >= Dynamic.from_symbol("p")
+    assert Dynamic.from_symbol("f") >= Dynamic.from_symbol("p")
+    assert Dynamic.from_symbol("p") >= Dynamic.from_symbol("pp")
+
     for symbol in ("mpp", "fp", "mff", "forte", "fm", "n"):
         with pytest.raises(ValueError):
             Dynamic.from_symbol(symbol)
+
+    with pytest.raises(TypeError):
+        Dynamic.from_symbol("p") < 5
 
 
 def test_note():

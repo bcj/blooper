@@ -15,7 +15,8 @@ from random import choice
 from typing import Callable, Generator, Iterable, Iterator, Optional
 
 from blooper.dynamics import AttackDecaySustainRelease, DynamicRange, Envelope
-from blooper.filetypes import SampleFile
+from blooper.filetypes import SampleFile, UsageMetadata
+from blooper.notes import Dynamic
 from blooper.parts import Part
 from blooper.pitch import Tuning
 from blooper.waveforms import Waveform
@@ -179,7 +180,7 @@ class Sampler(Instrument):
 
     def __init__(
         self,
-        sample_paths: dict[Path, float],
+        samples: dict[Path, UsageMetadata],
         tuning: Tuning,
         envelope: Optional[Envelope] = None,
         dynamics: Optional[DynamicRange] = None,
@@ -200,14 +201,16 @@ class Sampler(Instrument):
         self.balance = balance
         self.loop = loop
         self.max_distance = max_distance
-        self.samples = self.map_samples(sample_paths, sample_format)
+        self.samples = self.map_samples(samples, sample_format)
 
     @property
     def tuning(self) -> Tuning:
         return self._tuning
 
     @cache
-    def compatible_samples(self, frequency: float, sample_rate: int) -> set[SampleFile]:
+    def compatible_samples(
+        self, frequency: float, sample_rate: int, dynamic: Optional[Dynamic] = None
+    ) -> set[SampleFile]:
         """
         Return the list of all compatible samples for a given frequency
         and sample rate
@@ -221,6 +224,15 @@ class Sampler(Instrument):
                 continue
 
             for actual_frequency, samples in samples_at_rate.items():
+                samples = {
+                    sample
+                    for sample in samples
+                    if sample.usage_metadata.compatible_dynamic(dynamic)
+                }
+
+                if not samples:
+                    continue
+
                 if frequency == actual_frequency:
                     if distance == 0:
                         closest = closest.union(samples)
@@ -308,7 +320,9 @@ class Sampler(Instrument):
                     signal = None
 
             frequency = self.tuning.pitch_to_frequency(tone.pitch)
-            compatible = list(self.compatible_samples(frequency, sample_rate))
+            compatible = list(
+                self.compatible_samples(frequency, sample_rate, tone.dynamic)
+            )
 
             if compatible:
                 sample = choice(compatible)
@@ -331,7 +345,7 @@ class Sampler(Instrument):
 
     @staticmethod
     def map_samples(
-        sample_paths: dict[Path, float], sample_format: str
+        sample_paths: dict[Path, UsageMetadata], sample_format: str
     ) -> dict[int, dict[float, set[SampleFile]]]:
         if sample_format == "wav":
             # love to avoid circular imports
@@ -345,10 +359,10 @@ class Sampler(Instrument):
             lambda: defaultdict(set)
         )
 
-        for path, frequency in sample_paths.items():
-            sample = SampleClass.from_path(path)
+        for path, metadata in sample_paths.items():
+            sample = SampleClass.from_path(path, metadata=metadata)
 
-            samples[sample.sample_rate][frequency].add(sample)
+            samples[sample.sample_rate][metadata.frequency].add(sample)
 
         return samples
 
@@ -375,7 +389,21 @@ class Sampler(Instrument):
             if not sample_path.is_absolute():
                 sample_path = path.parent / sample_path
 
-            sample_paths[sample_path] = frequency
+            minimum_volume = None
+            if "minimum-volume" in sample:
+                minimum_volume = Dynamic.from_name(sample["minimum-volume"])
+            elif "min-volume" in sample:
+                minimum_volume = Dynamic.from_symbol(sample["min-volume"])
+
+            maximum_volume = None
+            if "maximum-volume" in sample:
+                maximum_volume = Dynamic.from_name(sample["maximum-volume"])
+            elif "max-volume" in sample:
+                maximum_volume = Dynamic.from_symbol(sample["max-volume"])
+
+            sample_paths[sample_path] = UsageMetadata(
+                frequency, minimum_volume, maximum_volume
+            )
 
         return Sampler(
             sample_paths,

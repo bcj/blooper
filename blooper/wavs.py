@@ -7,7 +7,7 @@ import struct
 from pathlib import Path
 from typing import Any, BinaryIO, Generator, Iterable
 
-from blooper.filetypes import SampleFile
+from blooper.filetypes import SampleFile, UsageMetadata
 from blooper.mixers import Mixer
 
 FILE_HEADER = "<4sI4s"
@@ -80,13 +80,18 @@ def record(
 
 
 class WavSample(SampleFile):
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, usage: UsageMetadata):
         self.path = path
+        self.usage = usage
         self._loaded = False
 
         self._channels: int
         self._sample_rate: int
         self._seek_point: int
+
+    @property
+    def usage_metadata(self) -> UsageMetadata:
+        return self.usage
 
     @property
     def channels(self) -> int:
@@ -225,8 +230,8 @@ class WavSample(SampleFile):
         return f"{self.__class__.__name__}({self.path!r})"
 
     @classmethod
-    def from_path(cls, path: Path) -> WavSample:
-        return cls(path)
+    def from_path(cls, path: Path, *, metadata: UsageMetadata) -> WavSample:
+        return cls(path, metadata)
 
 
 __all__ = ("record", "WavSample")
