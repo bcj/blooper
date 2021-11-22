@@ -13,110 +13,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import IntEnum
 from fractions import Fraction
-from functools import cache
 from typing import Generator, Iterable, NamedTuple, Optional, cast
 
+from blooper.keys import KEYS, Key
 from blooper.notes import TAILOFF_FACTOR, Accent, Dynamic, Note, Rest, Tone
-from blooper.pitch import FLAT, NATURAL, SHARP, Pitch, accidental_symbol
-
-
-# TODO: Still not sure if this and Scale interact in the way we want.
-# TODO: change to: name, root (pitch_class, accidental), accidentals
-@dataclass(frozen=True)
-class Key:
-    """
-    The sets of flats and sharps (or other accidentals) defining all
-    pitch classes in a scale.
-
-    Any unspecificed class is assumed to be natural.
-    """
-
-    root: str
-    major: bool
-    accidentals: dict[str, Fraction]
-
-    @property
-    def name(self) -> str:
-        accidental = self.accidental(self.root)
-        if accidental:
-            root = f"{self.root}{accidental_symbol(accidental)}"
-        else:
-            root = self.root
-
-        kind = "Major" if self.major else "Minor"
-
-        return f"{root} {kind}"
-
-    # needed so we can cache tone_to_step
-    def __hash__(self) -> int:
-        return hash((self.root, self.major, tuple(sorted(self.accidentals.items()))))
-
-    @cache
-    def accidental(self, pitch_class: str) -> Fraction:
-        return self.accidentals.get(pitch_class, NATURAL)
-
-    @cache
-    def in_key(self, pitch: Pitch) -> Pitch:
-        if pitch.accidental is None:
-            return Pitch(
-                pitch.order, pitch.pitch_class, self.accidental(pitch.pitch_class)
-            )
-
-        return pitch
-
-    @classmethod
-    def new(
-        cls,
-        root: str,
-        major: bool,
-        *,
-        flats: Optional[Iterable[str]] = None,
-        sharps: Optional[Iterable[str]] = None,
-    ) -> Key:
-        """
-        Convenience method for creating keys.
-        """
-
-        accidentals = {}
-
-        for pitch_classes, accidental in ((flats, FLAT), (sharps, SHARP)):
-            if pitch_classes:
-
-                for pitch_class in pitch_classes:
-                    if pitch_class in accidentals:
-                        raise ValueError(f"Pitch class specified twice: {pitch_class}")
-
-                    accidentals[pitch_class] = accidental
-
-        return cls(root, major, accidentals)
-
-
-KEYS = {
-    "C Major": Key.new("C", True),
-    "G Major": Key.new("G", True, sharps=("F",)),
-    "D Major": Key.new("D", True, sharps=("F", "C")),
-    "A Major": Key.new("A", True, sharps=("C", "F", "G")),
-    "E Major": Key.new("E", True, sharps=("F", "G", "C", "D")),
-    "B Major": Key.new("B", True, sharps=("C", "D", "F", "G", "A")),
-    "F♯ Major": Key.new("F", True, sharps=("F", "G", "A", "C", "D", "E")),
-    "D♭ Major": Key.new("D", True, flats=("D", "E", "G", "A", "B")),
-    "A♭ Major": Key.new("A", True, flats=("A", "B", "D", "E")),
-    "E♭ Major": Key.new("E", True, flats=("E", "A", "B")),
-    "B♭ Major": Key.new("B", True, flats=("B", "E")),
-    "F Major": Key.new("F", True, flats=("B",)),
-    "C Minor": Key.new("C", False, flats=("E", "A", "B")),
-    "G Minor": Key.new("G", False, flats=("B", "E")),
-    "D Minor": Key.new("D", False, flats=("B",)),
-    "A Minor": Key.new("A", False),
-    "E Minor": Key.new("E", False, sharps=("F",)),
-    "B Minor": Key.new("B", False, sharps=("C", "F")),
-    "F♯ Minor": Key.new("F", False, sharps=("F", "G", "C")),
-    "C♯ Minor": Key.new("C", False, sharps=("C", "D", "F", "G")),
-    "G♯ Minor": Key.new("G", False, sharps=("G", "A", "C", "D", "F")),
-    "E♭ Minor": Key.new("E", False, flats=("E", "G", "A", "B", "C", "D")),
-    "B♭ Minor": Key.new("B", False, flats=("B", "D", "E", "G", "A")),
-    "F Minor": Key.new("F", False, flats=("A", "B", "D", "E")),
-}
 
 
 class TimeSignature(NamedTuple):
@@ -473,4 +373,4 @@ class Part:
             raise ValueError("Hanging slur/tie at end of part")
 
 
-__all__ = ("KEYS", "Key", "Measure", "Part", "Tempo", "TimeSignature")
+__all__ = ("Measure", "Part", "Tempo", "TimeSignature")

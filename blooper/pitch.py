@@ -64,9 +64,11 @@ ACCIDENTAL_NAMES = {
     "sesquisharp": Fraction(3, 4),
 }
 
+DOUBLE_FLAT = ACCIDENTAL_SYMBOLS["𝄫"]
 FLAT = ACCIDENTAL_NAMES["flat"]
 NATURAL = ACCIDENTAL_NAMES["natural"]
 SHARP = ACCIDENTAL_NAMES["sharp"]
+DOUBLE_SHARP = ACCIDENTAL_SYMBOLS["𝄪"]
 
 
 @cache
@@ -406,6 +408,8 @@ __all__ = (
     "ARAB_SCALE",
     "CHROMATIC_SCALE",
     "BOHLEN_PIERCE_SCALE",
+    "DOUBLE_FLAT",
+    "DOUBLE_SHARP",
     "FLAT",
     "JUST_BOHLEN_PIERCE",
     "NATURAL",
