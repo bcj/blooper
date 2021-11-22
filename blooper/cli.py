@@ -245,7 +245,7 @@ def parse_key(name: str) -> Key:
 
 
 def parse_note(text: str) -> tuple[int, Optional[Pitch]]:
-    match = re.search(r"^(\d+)(.*?)$", text)
+    match = re.search(r"^(\d+)(.+?)$", text)
     if match:
         str_length, text = match.groups()
         length = int(str_length)
@@ -259,7 +259,7 @@ def parse_pitch(text: str) -> Optional[Pitch]:
     if text in ("", "-"):
         return None
 
-    match = re.search(r"^([^\d]+)(\d+)([^\d]*?)$", text)
+    match = re.search(r"^([^\d]+?)(-?\d+)([^\d]*?)$", text)
 
     if not match:
         raise ValueError(f"Unknown note: {text}")
