@@ -9,7 +9,6 @@ from typing import Optional
 
 from blooper import (
     KEYS,
-    Accent,
     Dynamic,
     Key,
     Mixer,
@@ -23,7 +22,17 @@ from blooper import (
     Tuning,
     record,
 )
+from blooper.pitch import ARAB_SCALE, BOHLEN_PIERCE_SCALE, CHROMATIC_SCALE
 from blooper.waveforms import WAVES
+
+DEFAULT_TEMPO = Tempo.ALLEGRO
+DEFAULT_DYNAMIC = Dynamic.from_name("mezzo-forte")
+DEFAULT_KEY = None
+DEFAULT_LOOPS = 1
+DEFAULT_WAVE = "sine"
+DEFAULT_PITCH = Pitch(4, "A")
+DEFAULT_FREQUENCY = 440
+DEFAULT_SCALE = CHROMATIC_SCALE
 
 
 def main(input_args: Optional[list[str]] = None):
@@ -36,66 +45,188 @@ def main(input_args: Optional[list[str]] = None):
     sequencer = commands.add_parser("sequencer", help="A (very basic) step sequencer")
     sequencer.add_argument("path", type=Path, help="Where to save the output.")
     sequencer.add_argument(
+        "--notes",
+        action="append",
+        nargs="+",
+        type=parse_note,
+        help="The notes to play",
+    )
+    sequencer.add_argument(
         "--tempo",
+        action="append",
         type=int,
-        default=Tempo.ALLEGRO,
-        help="How many beats (steps) to play in a minute. Defaults to 140",
+        help=f"How many beats (steps) to play in a minute. Defaults to {DEFAULT_TEMPO}",
+    )
+    sequencer.add_argument(
+        "--dynamic",
+        action="append",
+        type=Dynamic.from_name,
+        help="How loud the sequencer should play",
+    )
+    sequencer.add_argument(
+        "-d",
+        dest="dynamic",
+        action="append",
+        type=Dynamic.from_symbol,
+        help="How loud the sequencer should play",
     )
     sequencer.add_argument(
         "--key",
         type=parse_key,
-        # choices=KEYS.keys(),
         help="The key to use",
     )
     sequencer.add_argument(
         "--loops",
+        action="append",
         type=int,
-        default=1,
         help="How many times to play through the sequenced notes",
     )
     sequencer.add_argument(
         "--wave",
-        default="sine",
+        action="append",
         choices=WAVES.keys(),
-        help="Kind of instrument to use",
+        help=f"Kind of instrument to use. Defaults to {DEFAULT_WAVE}",
     )
     sequencer.add_argument(
         "--tuning-pitch",
+        action="append",
         type=parse_pitch,
-        default=Pitch(4, "A"),
-        help="The pitch to tune to",
+        help=f"The pitch to tune to. Defaults to {DEFAULT_PITCH}",
     )
     sequencer.add_argument(
-        "--tuning-frequency", type=float, default=440, help="The frequency to tune to"
+        "--tuning-frequency",
+        action="append",
+        type=float,
+        help=f"The frequency to tune to. Defaults to {DEFAULT_FREQUENCY}",
     )
     sequencer.add_argument(
-        "notes", nargs="+", type=parse_note, help="The notes to play"
+        "--chromatic",
+        dest="scale",
+        action="append_const",
+        const=CHROMATIC_SCALE,
+        help="Use a chromatic scale (this is the default)",
+    )
+    sequencer.add_argument(
+        "--arab",
+        dest="scale",
+        action="append_const",
+        const=ARAB_SCALE,
+        help="Use a Arab scale",
+    )
+    sequencer.add_argument(
+        "--bohlen-pierce",
+        dest="scale",
+        action="append_const",
+        const=BOHLEN_PIERCE_SCALE,
+        help="Use a Bohlen-Pierce Scale",
     )
 
     args = parser.parse_args()
 
+    if args.tempo is None:
+        args.tempo = [DEFAULT_TEMPO]
+
+    if args.dynamic is None:
+        args.dynamic = [DEFAULT_DYNAMIC]
+
+    if args.key is None:
+        args.key = [DEFAULT_KEY]
+
+    if args.loops is None:
+        args.loops = [DEFAULT_LOOPS]
+
+    if args.wave is None:
+        args.wave = [DEFAULT_WAVE]
+
+    if args.tuning_pitch is None:
+        args.tuning_pitch = [DEFAULT_PITCH]
+
+    if args.tuning_frequency is None:
+        args.tuning_frequency = [DEFAULT_FREQUENCY]
+
+    if args.scale is None:
+        args.scale = [DEFAULT_SCALE]
+
+    num_parts = len(args.notes)
+    if num_parts:
+        base_message = (
+            "Each setting must be supplied either once, "
+            "or once for each part being played. "
+            "Invalid setting: {}"
+        )
+
+        if len(args.tempo) == 1:
+            args.tempo *= num_parts
+        elif len(args.tempo) != num_parts:
+            raise ValueError(base_message.format("tempo"))
+
+        if len(args.dynamic) == 1:
+            args.dynamic *= num_parts
+        elif len(args.dynamic) != num_parts:
+            raise ValueError(base_message.format("dynamic"))
+
+        if len(args.key) == 1:
+            args.key *= num_parts
+        elif len(args.key) != num_parts:
+            raise ValueError(base_message.format("key"))
+
+        if len(args.loops) == 1:
+            args.loops *= num_parts
+        elif len(args.loops) != num_parts:
+            raise ValueError(base_message.format("loops"))
+
+        if len(args.wave) == 1:
+            args.wave *= num_parts
+        elif len(args.wave) != num_parts:
+            raise ValueError(base_message.format("wave"))
+
+        if len(args.tuning_pitch) == 1:
+            args.tuning_pitch *= num_parts
+        elif len(args.tuning_pitch) != num_parts:
+            raise ValueError(base_message.format("tuning pitch"))
+
+        if len(args.tuning_frequency) == 1:
+            args.tuning_frequency *= num_parts
+        elif len(args.tuning_frequency) != num_parts:
+            raise ValueError(base_message.format("tuning frequency"))
+
+        if len(args.scale) == 1:
+            args.scale *= num_parts
+        elif len(args.scale) != num_parts:
+            raise ValueError(base_message.format("scale"))
+
+    inputs = []
+
     length = Fraction(1, 4)
-    total = 0
-    notes: list[Note | Rest] = []
-    for beats, pitch in args.notes:
-        duration = length * beats
-        total += beats
-        notes.append(Rest(duration) if pitch is None else Note(duration, pitch))
 
-    part = Part(
-        TimeSignature.new(total, 4),
-        args.tempo,
-        Dynamic.from_name("mezzo-forte"),
-        [notes] * args.loops,
-    )
+    for index, pitches in enumerate(args.notes):
+        total = 0
+        notes: list[Note | Rest] = []
+        for beats, pitch in pitches:
+            duration = length * beats
+            total += beats
+            notes.append(Rest(duration) if pitch is None else Note(duration, pitch))
 
-    instrument = Synthesizer(
-        Tuning(args.tuning_pitch, args.tuning_frequency), wave=args.wave
-    )
+        inputs.append(
+            (
+                Synthesizer(
+                    Tuning(
+                        args.tuning_pitch[index],
+                        args.tuning_frequency[index],
+                        scale=args.scale[index],
+                    ),
+                    wave=args.wave[index],
+                ),
+                Part(
+                    TimeSignature.new(total, 4),
+                    args.tempo[index],
+                    args.dynamic[index],
+                    [notes] * args.loops[index],
+                ),
+            )
+        )
 
-    mixer = Mixer.solo(instrument, part)
-
-    record(args.path, mixer)
+    record(args.path, Mixer.even(*inputs))
 
 
 def parse_key(name: str) -> Key:
