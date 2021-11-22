@@ -9,6 +9,7 @@ from typing import Optional
 
 from blooper import (
     KEYS,
+    Accent,
     Dynamic,
     Key,
     Mixer,
@@ -68,18 +69,21 @@ def main(input_args: Optional[list[str]] = None):
         "--tuning-frequency", type=float, default=440, help="The frequency to tune to"
     )
     sequencer.add_argument(
-        "notes", nargs="+", type=parse_pitch, help="The notes to play"
+        "notes", nargs="+", type=parse_note, help="The notes to play"
     )
 
     args = parser.parse_args()
 
     length = Fraction(1, 4)
-    notes: list[Note | Rest] = [
-        Rest(length) if pitch is None else Note(length, pitch) for pitch in args.notes
-    ]
+    total = 0
+    notes: list[Note | Rest] = []
+    for beats, pitch in args.notes:
+        duration = length * beats
+        total += beats
+        notes.append(Rest(duration) if pitch is None else Note(duration, pitch))
 
     part = Part(
-        TimeSignature.new(len(notes), 4),
+        TimeSignature.new(total, 4),
         args.tempo,
         Dynamic.from_name("mezzo-forte"),
         [notes] * args.loops,
@@ -109,11 +113,22 @@ def parse_key(name: str) -> Key:
     return KEYS[name]
 
 
+def parse_note(text: str) -> tuple[int, Optional[Pitch]]:
+    match = re.search(r"^(\d+)(.*?)$", text)
+    if match:
+        str_length, text = match.groups()
+        length = int(str_length)
+    else:
+        length = 1
+
+    return length, parse_pitch(text)
+
+
 def parse_pitch(text: str) -> Optional[Pitch]:
     if text in ("", "-"):
         return None
 
-    match = re.search(r"^([^\d]+)(\d+)([^\d]*)$", text)
+    match = re.search(r"^([^\d]+)(\d+)([^\d]*?)$", text)
 
     if not match:
         raise ValueError(f"Unknown note: {text}")
@@ -121,7 +136,11 @@ def parse_pitch(text: str) -> Optional[Pitch]:
     pitch_class, order_string, accidental = match.groups()
     order = int(order_string)
 
-    return Pitch.new(order, pitch_class.upper(), accidental or None)
+    return Pitch.new(
+        order,
+        pitch_class.upper(),
+        accidental or None,
+    )
 
 
 if __name__ == "__main__":
