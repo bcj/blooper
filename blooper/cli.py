@@ -47,6 +47,7 @@ def main(input_args: Optional[list[str]] = None):
     sequencer.add_argument(
         "--notes",
         action="append",
+        required=True,
         nargs="+",
         type=parse_note,
         help="The notes to play",
@@ -72,6 +73,7 @@ def main(input_args: Optional[list[str]] = None):
     )
     sequencer.add_argument(
         "--key",
+        action="append",
         type=parse_key,
         help="The key to use",
     )
@@ -218,10 +220,11 @@ def main(input_args: Optional[list[str]] = None):
                     wave=args.wave[index],
                 ),
                 Part(
-                    TimeSignature.new(total, 4),
-                    args.tempo[index],
-                    args.dynamic[index],
-                    [notes] * args.loops[index],
+                    time=TimeSignature.new(total, 4),
+                    tempo=args.tempo[index],
+                    dynamic=args.dynamic[index],
+                    measures=[notes] * args.loops[index],
+                    key=args.key[index],
                 ),
             )
         )
