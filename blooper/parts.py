@@ -31,6 +31,10 @@ class TimeSignature(NamedTuple):
         return f"{self.beats_per_measure}/{self.beat_size.denominator}"
 
 
+COMMON_TIME = TimeSignature.new(4, 4)
+WALTZ_TIME = TimeSignature.new(3, 4)
+
+
 # These numbers have been somewhat arbitrarily chosen such that they
 # conform to a list of ranges for each from wikipedia.
 # It would be nice to eventually support the 'feel' that tempos imply
@@ -274,10 +278,10 @@ class Part:
     NOTE: Polyphony is not currently supported on a per-part basis.
     """
 
-    time: TimeSignature
-    tempo: int
-    dynamic: Dynamic
     measures: list[Measure | list[Note | Rest]]
+    time: TimeSignature = COMMON_TIME
+    tempo: int = Tempo.ALLEGRO_MODERATO
+    dynamic: Dynamic = Dynamic.from_symbol("mf")
     key: Optional[Key] = None
     _tailoff_factor: Fraction = TAILOFF_FACTOR
 
@@ -373,4 +377,4 @@ class Part:
             raise ValueError("Hanging slur/tie at end of part")
 
 
-__all__ = ("Measure", "Part", "Tempo", "TimeSignature")
+__all__ = ("COMMON_TIME", "WALTZ_TIME", "Measure", "Part", "Tempo", "TimeSignature")

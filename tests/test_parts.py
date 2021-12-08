@@ -358,11 +358,8 @@ def test_measure():
 
 def test_part():
     from blooper.notes import Accent, Dynamic, Note, Rest, Tone
-    from blooper.parts import KEYS, Key, Measure, Part, TimeSignature
+    from blooper.parts import COMMON_TIME, KEYS, WALTZ_TIME, Key, Measure, Part
     from blooper.pitch import FLAT, NATURAL, SHARP, Pitch
-
-    common_time = TimeSignature.new(4, 4)
-    waltz_time = TimeSignature.new(3, 4)
 
     piano = Dynamic.from_symbol("p")
     mezzo_forte = Dynamic.from_symbol("mf")
@@ -370,9 +367,6 @@ def test_part():
     fortissimo = Dynamic.from_symbol("ff")
 
     part = Part(
-        common_time,
-        120,
-        forte,
         [
             Measure(
                 [
@@ -411,7 +405,7 @@ def test_part():
                     Note(Fraction(1, 2), Pitch(3, "A"), accent=Accent.TENUTO),
                     Note(Fraction(1, 4), Pitch(3, "F", SHARP), accent=Accent.SLUR),
                 ],
-                time=waltz_time,
+                time=WALTZ_TIME,
             ),
             Measure(
                 [
@@ -420,11 +414,12 @@ def test_part():
                     Rest(Fraction(1, 2)),
                     Note(Fraction(1, 8), Pitch(3, "A"), accent=Accent.TENUTO),
                 ],
-                time=common_time,
+                time=COMMON_TIME,
                 keys={Fraction(0, 1): Key.new("A", True, flats=["A"])},
             ),
         ],
-        KEYS["C Major"],
+        dynamic=forte,
+        key=KEYS["C Major"],
     )
 
     tones = list(part.tones(30_000))
@@ -445,9 +440,6 @@ def test_part():
     # slurs can't be followed by rests
     list(
         Part(
-            waltz_time,
-            120,
-            forte,
             [
                 [
                     Note(Fraction(1, 4), Pitch(4, "A")),
@@ -459,6 +451,8 @@ def test_part():
                     Note(Fraction(1, 2), Pitch(4, "A")),
                 ],
             ],
+            time=WALTZ_TIME,
+            dynamic=forte,
         ).tones(40_000)
     )
 
@@ -466,9 +460,6 @@ def test_part():
     with pytest.raises(ValueError):
         list(
             Part(
-                waltz_time,
-                120,
-                forte,
                 [
                     [
                         Note(Fraction(1, 4), Pitch(4, "A"), accent=Accent.SLUR),
@@ -480,6 +471,9 @@ def test_part():
                         Note(Fraction(1, 2), Pitch(4, "A")),
                     ],
                 ],
+                time=WALTZ_TIME,
+                tempo=120,
+                dynamic=forte,
             ).tones(40_000)
         )
 
@@ -487,9 +481,6 @@ def test_part():
     with pytest.raises(ValueError):
         list(
             Part(
-                waltz_time,
-                120,
-                forte,
                 [
                     [
                         Note(Fraction(1, 4), Pitch(4, "A")),
@@ -501,6 +492,7 @@ def test_part():
                         Note(Fraction(1, 2), Pitch(4, "A")),
                     ],
                 ],
+                time=WALTZ_TIME,
             ).tones(40_000)
         )
 
@@ -508,9 +500,6 @@ def test_part():
     with pytest.raises(ValueError):
         list(
             Part(
-                waltz_time,
-                120,
-                forte,
                 [
                     [
                         Note(Fraction(1, 4), Pitch(4, "A")),
@@ -522,5 +511,6 @@ def test_part():
                         Note(Fraction(1, 2), Pitch(4, "A"), accent=Accent.SLUR),
                     ],
                 ],
+                time=WALTZ_TIME,
             ).tones(40_000)
         )

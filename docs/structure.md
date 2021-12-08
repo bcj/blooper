@@ -14,6 +14,8 @@ It contains the [tempo](#tempo), [time signature](#time-signatures) and [key sig
 Tempos are supplied in beats per minute (bpm).
 You can either supply an (integer) number directly, or with any of the named tempos in the `blooper.parts.Tempo` enum.
 
+Parts default to `Tempo.ALLEGRO_MODERATO` (120 bpm).
+
 ### Time Signatures
 
 A `TimeSignature` (found in `blooper.parts`) contains two values-the number of beats contained in a measure, and the length of a single beat (as a fraction of a whole note).
@@ -21,6 +23,8 @@ If you use the `new` classmethod, you can pass the beat length as its reciprocal
 
 The [`Part`](#parts) will softly enforce that every measure contains the correct number of beats.
 Measure with too many beats will cause errors but measures with too few beats will be assumed to have rests for the remained of the beat.
+
+Parts default to common time (4/4).
 
 ### Dynamic
 
@@ -30,6 +34,8 @@ Dynamics can be supplied by name using the `from_name` method (e.g., `mezzo-pian
 The Dynamic supplied with the [`Part`](#parts) will be used for all [`Note`s](#notes--rests) that do not supply their own dynamic.
 
 Converting relative dynamics into output volumes is handled by the [`Instrument`](#instruments) playing the part.
+
+Parts default to mezzo-forte.
 
 ### Key
 

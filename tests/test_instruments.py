@@ -72,14 +72,11 @@ def test_synthesizer():
     from blooper.dynamics import AttackDecaySustainRelease, DynamicRange, Homogeneous
     from blooper.instruments import Synthesizer
     from blooper.notes import Accent, Dynamic, Note, Rest
-    from blooper.parts import Part, Tempo, TimeSignature
+    from blooper.parts import Part, TimeSignature
     from blooper.pitch import Pitch, Tuning
 
     tuning = Tuning(Pitch(0, "A"), 10)
     part = Part(
-        TimeSignature.new(4, 4),
-        Tempo.ALLEGRO_MODERATO,
-        Dynamic.from_name("fortissimo"),
         [
             [
                 Note(Fraction(1, 2), Pitch(0, "A"), accent=Accent.TENUTO),
@@ -87,6 +84,7 @@ def test_synthesizer():
                 Note(Fraction(1, 4), Pitch(-1, "A"), accent=Accent.TENUTO),
             ],
         ],
+        dynamic=Dynamic.from_name("fortissimo"),
     )
 
     homogeneous = Synthesizer(
@@ -276,15 +274,14 @@ def test_synthesizer():
         list(adsr.play(part, 20, channels=3))
 
     part = Part(
-        TimeSignature.new(2, 4),
-        Tempo.ALLEGRO_MODERATO,
-        Dynamic.from_name("fortissimo"),
         [
             [
                 Rest(Fraction(1, 4)),
                 Note(Fraction(1, 4), Pitch(-1, "A"), accent=Accent.TENUTO),
             ],
         ],
+        time=TimeSignature.new(2, 4),
+        dynamic=Dynamic.from_name("fortissimo"),
     )
 
     assert list(homogeneous.play(part, 20)) == [
