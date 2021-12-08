@@ -25,8 +25,8 @@ def test_mixer():
         [[Rest(Fraction(1, 2)), Rest(Fraction(1, 2))]],
     )
 
-    synthesizer = Synthesizer(tuning)
-    square = Synthesizer(tuning, wave="square")
+    synthesizer = Synthesizer(tuning=tuning)
+    square = Synthesizer("square", tuning=tuning)
 
     assert Mixer.solo(synthesizer, part) == Mixer((synthesizer,), (part,), (1,))
     assert Mixer.solo(synthesizer, part, 0.5) == Mixer((synthesizer,), (part,), (0.5,))

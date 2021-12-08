@@ -212,7 +212,7 @@ def main(input_args: Optional[list[str]] = None):
         inputs.append(
             (
                 Synthesizer(
-                    Tuning(
+                    tuning=Tuning(
                         args.tuning_pitch[index],
                         args.tuning_frequency[index],
                         scale=args.scale[index],

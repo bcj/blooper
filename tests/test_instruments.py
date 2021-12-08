@@ -90,7 +90,7 @@ def test_synthesizer():
     )
 
     homogenous = Synthesizer(
-        tuning, wave="square", balance=0.5, envelope=Homogenous(DynamicRange())
+        "square", tuning=tuning, balance=0.5, envelope=Homogenous(DynamicRange())
     )
     assert list(homogenous.play(part, 20)) == [
         (0.25, 0.75),
@@ -220,7 +220,7 @@ def test_synthesizer():
     ]
 
     adsr = Synthesizer(
-        tuning,
+        tuning=tuning,
         wave="square",
         envelope=AttackDecaySustainRelease(
             DynamicRange(), attack=0.1, decay=0.5, release=0.5
@@ -313,16 +313,16 @@ def test_synthesizer():
     # TODO: default wave and envelope. This is just defaults checking
     default_envelope = AttackDecaySustainRelease(DynamicRange())
 
-    synthesizer = Synthesizer(tuning, wave=None)
+    synthesizer = Synthesizer(None, tuning=tuning)
     assert synthesizer.wave == "sine"
     assert synthesizer.envelope == default_envelope
 
     loud_only = DynamicRange(minimum=Dynamic.from_name("forte"))
-    synthesizer = Synthesizer(tuning, wave=None, dynamics=loud_only)
+    synthesizer = Synthesizer(tuning=tuning, dynamics=loud_only)
     assert synthesizer.envelope == AttackDecaySustainRelease(loud_only)
 
     synthesizer = Synthesizer(
-        tuning, wave=None, dynamics=loud_only, envelope=default_envelope
+        tuning=tuning, dynamics=loud_only, envelope=default_envelope
     )
     assert synthesizer.envelope == default_envelope
 
@@ -409,7 +409,7 @@ def test_sampler():
         with config.open("w") as stream:
             json.dump({"format": "wav", "samples": []}, stream)
 
-        sampler = Sampler.from_file(config, tuning)
+        sampler = Sampler.from_file(config, tuning=tuning)
         assert sampler.samples == {}
 
         with config.open("w") as stream:
@@ -445,7 +445,7 @@ def test_sampler():
         forte = Dynamic.from_symbol("f")
         meta200ppf = UsageMetadata(200, pianissimo, forte)
 
-        sampler = Sampler.from_file(config, tuning)
+        sampler = Sampler.from_file(config, tuning=tuning)
         assert sampler.samples == expected
 
         # compatible_samples
@@ -471,7 +471,7 @@ def test_sampler():
 
         # in range
         assert Sampler.from_file(
-            config, tuning, max_distance=500  # actual distance is 498
+            config, tuning=tuning, max_distance=500  # actual distance is 498
         ).compatible_samples(300, 10_000) == {
             WavSample(directory / "a4_20,000.wav", meta400),
             WavSample(directory / "a4_20,000b.wav", meta400),
@@ -480,9 +480,9 @@ def test_sampler():
 
         # wait, why didn't you just pick different samples instead of
         # finding the note equidistant from the samples you already had?
-        assert Sampler.from_file(config, tuning, max_distance=600).compatible_samples(
-            282.842712474619, 10_000
-        ) == {
+        assert Sampler.from_file(
+            config, tuning=tuning, max_distance=600
+        ).compatible_samples(282.842712474619, 10_000) == {
             WavSample(directory / "a3_20,000.wav", meta200),
             WavSample(directory / "a3_20,000b.wav", meta200ppf),
             WavSample(directory / "a3_40,000.wav", meta200ppf),
@@ -498,7 +498,7 @@ def test_sampler():
                 directory / "a3_20,000b.wav": UsageMetadata(200, pianissimo),
                 directory / "a3_40,000.wav": UsageMetadata(200, forte),
             },
-            tuning,
+            tuning=tuning,
         )
         assert 3 == len(sampler.compatible_samples(200, 20_000))
         assert 2 == len(sampler.compatible_samples(200, 20_000, pianissimo))
@@ -538,7 +538,7 @@ def test_sampler():
                     round(channel, digits) for channel in item_b
                 ]
 
-        sampler = Sampler(paths, tuning, envelope, loop=False)
+        sampler = Sampler(paths, tuning=tuning, envelope=envelope, loop=False)
         part = FakePart(
             [
                 (3, Tone(3, Pitch(3, "A"), Dynamic.from_name("forte"))),
@@ -599,7 +599,7 @@ def test_sampler():
             list(sampler.play(part, 20_000, channels=4))
 
         # mono, loop
-        sampler = Sampler(paths, tuning, envelope, loop=True)
+        sampler = Sampler(paths, tuning=tuning, envelope=envelope, loop=True)
         compare_samples(
             sampler.play(part, 20_000, channels=1),
             [

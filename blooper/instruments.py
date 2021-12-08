@@ -18,7 +18,7 @@ from blooper.dynamics import AttackDecaySustainRelease, DynamicRange, Envelope
 from blooper.filetypes import SampleFile, UsageMetadata
 from blooper.notes import Dynamic
 from blooper.parts import Part
-from blooper.pitch import Tuning
+from blooper.pitch import A440, Tuning
 from blooper.waveforms import Waveform
 
 # Distance in cents
@@ -94,10 +94,10 @@ class Synthesizer(Instrument):
 
     def __init__(
         self,
-        tuning: Tuning,
-        *,
         wave: Optional[str | Callable[[float], float]] = "sine",
+        *,
         balance: float = 0,
+        tuning: Tuning = A440,
         envelope: Optional[Envelope] = None,
         dynamics: Optional[DynamicRange] = None,
     ):
@@ -181,10 +181,10 @@ class Sampler(Instrument):
     def __init__(
         self,
         samples: dict[Path, UsageMetadata],
-        tuning: Tuning,
+        *,
+        tuning: Tuning = A440,
         envelope: Optional[Envelope] = None,
         dynamics: Optional[DynamicRange] = None,
-        *,
         balance: float = 0,
         loop: bool = True,
         max_distance: float = MAX_DISTANCE,
@@ -370,10 +370,10 @@ class Sampler(Instrument):
     def from_file(
         cls,
         path: Path,
-        tuning: Tuning,
+        *,
+        tuning: Tuning = A440,
         envelope: Optional[Envelope] = None,
         dynamics: Optional[DynamicRange] = None,
-        *,
         balance: float = 0,
         loop: bool = True,
         max_distance: float = MAX_DISTANCE,
@@ -407,9 +407,9 @@ class Sampler(Instrument):
 
         return Sampler(
             sample_paths,
-            tuning,
-            envelope,
-            dynamics,
+            tuning=tuning,
+            envelope=envelope,
+            dynamics=dynamics,
             balance=balance,
             loop=loop,
             max_distance=max_distance,
