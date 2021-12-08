@@ -105,13 +105,13 @@ def test_dynamic_range():
     assert DynamicRange() != Dynamic.from_symbol("f")
 
 
-def test_homogenous():
-    from blooper.dynamics import DynamicRange, Homogenous
+def test_homogeneous():
+    from blooper.dynamics import DynamicRange, Homogeneous
     from blooper.notes import Accent, Dynamic, Tone
     from blooper.pitch import Pitch
 
     dynamics = DynamicRange()
-    envelope = Homogenous(dynamics)
+    envelope = Homogeneous(dynamics)
 
     for symbol in ("ppp", "pp", "p", "mp", "mf", "f", "ff", "fff"):
         for accent in (None, Accent.ACCENT, Accent.SLUR):

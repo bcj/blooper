@@ -151,7 +151,7 @@ class Envelope(ABC):
         """
 
 
-class Homogenous(Envelope):
+class Homogeneous(Envelope):
     """
     An envelope where each tone is played with the requested dynamic but
     without any variation within each tone.
@@ -468,4 +468,4 @@ class AttackDecaySustainRelease(Envelope):
                 yield 0.0
 
 
-__all__ = ("AttackDecaySustainRelease", "DynamicRange", "Envelope", "Homogenous")
+__all__ = ("AttackDecaySustainRelease", "DynamicRange", "Envelope", "Homogeneous")

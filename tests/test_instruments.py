@@ -69,7 +69,7 @@ def test_stereo_to_mono():
 
 
 def test_synthesizer():
-    from blooper.dynamics import AttackDecaySustainRelease, DynamicRange, Homogenous
+    from blooper.dynamics import AttackDecaySustainRelease, DynamicRange, Homogeneous
     from blooper.instruments import Synthesizer
     from blooper.notes import Accent, Dynamic, Note, Rest
     from blooper.parts import Part, Tempo, TimeSignature
@@ -89,10 +89,10 @@ def test_synthesizer():
         ],
     )
 
-    homogenous = Synthesizer(
-        "square", tuning=tuning, balance=0.5, envelope=Homogenous(DynamicRange())
+    homogeneous = Synthesizer(
+        "square", tuning=tuning, balance=0.5, envelope=Homogeneous(DynamicRange())
     )
-    assert list(homogenous.play(part, 20)) == [
+    assert list(homogeneous.play(part, 20)) == [
         (0.25, 0.75),
         (-0.25, -0.75),
         (0.25, 0.75),
@@ -136,7 +136,7 @@ def test_synthesizer():
     ]
 
     # double the sample rate, double the samples
-    assert list(homogenous.play(part, 40)) == [
+    assert list(homogeneous.play(part, 40)) == [
         (0.25, 0.75),
         (0.25, 0.75),
         (-0.25, -0.75),
@@ -287,7 +287,7 @@ def test_synthesizer():
         ],
     )
 
-    assert list(homogenous.play(part, 20)) == [
+    assert list(homogeneous.play(part, 20)) == [
         (0, 0),
         (0, 0),
         (0, 0),
@@ -328,7 +328,7 @@ def test_synthesizer():
 
 
 def test_sampler():
-    from blooper.dynamics import DynamicRange, Homogenous
+    from blooper.dynamics import DynamicRange, Homogeneous
     from blooper.filetypes import UsageMetadata
     from blooper.instruments import Sampler
     from blooper.notes import Dynamic, Tone
@@ -520,7 +520,7 @@ def test_sampler():
             write_wav(path, 20_000, samples)
             paths[path] = UsageMetadata(frequency)
 
-        envelope = Homogenous(DynamicRange(minimum_output=1, full_output=1))
+        envelope = Homogeneous(DynamicRange(minimum_output=1, full_output=1))
 
         class FakePart:
             def __init__(self, tones):
