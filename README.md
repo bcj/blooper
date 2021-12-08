@@ -22,6 +22,9 @@ Blooper does not (yet) support importing music written/edited using a tool that 
 
 Blooper provides a (basic) [command-line sequencer](docs/cli.md), but for now, you will need to write music directly as code to access much of its functionality.
 
+Writing music with Blooper requires interacting with more than a dozen distinct objects, so you may want to review the [project structure](docs/structure.md) before looking at [examples](docs/examples.md).
+If you're trying to do anything especially complex, you may need to directly review the code.
+
 Blooper renders all generated music to a WAV file.
 It is unlikely to support other file formats any time soon and probably will never support live music generation.
 
