@@ -404,7 +404,11 @@ class Tuning:
         return frequency
 
 
+A440 = Tuning(Pitch(4, "A"), 440)
+
+
 __all__ = (
+    "A440",
     "ARAB_SCALE",
     "CHROMATIC_SCALE",
     "BOHLEN_PIERCE_SCALE",
