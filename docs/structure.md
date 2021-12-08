@@ -7,7 +7,7 @@ A work is created by writing one or more [part](#parts) in the style of sheet mu
 ## Parts
 
 A `Part` (found in `blooper.parts`) operates like a piece of sheet music.
-It contains the [tempo](#tempo), [time signature](#time-signatures) and [key signature](#key), as well as any number of [measures](#measure).
+It contains the [tempo](#tempo), [time signature](#time-signatures) and [key signature](#key), as well as any number of [measures](#measures).
 
 ### Tempo
 
@@ -19,7 +19,7 @@ You can either supply an (integer) number directly, or with any of the named tem
 A `TimeSignature` (found in `blooper.parts`) contains two values-the number of beats contained in a measure, and the length of a single beat (as a fraction of a whole note).
 If you use the `new` classmethod, you can pass the beat length as its reciprocal.
 
-The [`Part`](#part) will softly enforce that every measure contains the correct number of beats.
+The [`Part`](#parts) will softly enforce that every measure contains the correct number of beats.
 Measure with too many beats will cause errors but measures with too few beats will be assumed to have rests for the remained of the beat.
 
 ### Dynamic
@@ -27,20 +27,20 @@ Measure with too many beats will cause errors but measures with too few beats wi
 A `Dynamic` (found in `blooper.notes`) represents the relative volume that notes should be played.
 Dynamics can be supplied by name using the `from_name` method (e.g., `mezzo-piano`, `fortissimo`) or by symbol using the `from_symbol` method (e.g., `mp`, `ff`).
 
-The Dynamic supplied with the [`Part`](#part) will be used for all [`Note`s](#notes-rests) that do not supply their own dynamic.
+The Dynamic supplied with the [`Part`](#parts) will be used for all [`Note`s](#notes--rests) that do not supply their own dynamic.
 
 Converting relative dynamics into output volumes is handled by the [`Instrument`](#instruments) playing the part.
 
 ### Key
 
-A `Key` (found in `blooper.keys`) determines how to handle [`Note`s](#notes-rests) in a [`Part`] that don't specify any accidentals.
+A `Key` (found in `blooper.keys`) determines how to handle [notes](#notes--rests) in a [`Part`](#parts) that don't specify any accidentals.
 The `blooper.keys.KEYS` dict specifies all the common major and minor keys.
 
 If no key is supplied for a part, all notes will be treated as naturals unless specified otherwise.
 
 ### Measures
 
-A `Measure` (found in `blooper.parts`) represents one set of [notes/rests](#notes-rests) as well as any [time](#time), [tempo](#tempo), [dynamic](#dynamic), and [key](#key) changes to introduce into a part.
+A `Measure` (found in `blooper.parts`) represents one set of [notes/rests](#notes--rests) as well as any [time](#time-signatures), [tempo](#tempo), [dynamic](#dynamic), and [key](#key) changes to introduce into a part.
 
 All changes continue forward past the end of the measure.
 Time changes can only be intruded at the beginning of a Measure.
@@ -54,7 +54,7 @@ If you do not need to specify any kind of change in a measure, you can supply me
 
 #### Notes & Rests
 
-A `Note` (found in `blooper.notes`) contains four components: a duration (as a fractional number of beats), a [pitch](#pitch), an optional [dynamic](#dynamic) (if not supplied, the part's current dynamic is used), and an optional [accent](#accent).
+A `Note` (found in `blooper.notes`) contains four components: a duration (as a fractional number of beats), a [pitch](#pitch), an optional [dynamic](#dynamic) (if not supplied, the part's current dynamic is used), and an optional [accent](#accents).
 
 A `Rest` (also found in `blooper.notes`) only contains a duration.
 
@@ -65,9 +65,9 @@ A `Pitch` (found in `blooper.pitch`) contains four component: an order (you can 
 If an accidental isn't provided, the note will be interpreted by the [key](#key) the part is currently in.
 You should use the constants `FLAT`/`NATURAL`/`SHARP` instead of rewriting fractions.
 
-See [scales & temperaments](scales-temperaments) if you're curious about some of the unusual wording choices when describing pitches.
+See [scales](#scales) if you're curious about some of the unusual wording choices when describing pitches.
 
-##### Accent
+##### Accents
 
 An `Accent` (found in `blooper.notes`) is a note modifier that affects how the instrument is supposed to approach playing a note.
 
@@ -85,7 +85,7 @@ Instruments take [parts](#parts) and optionally a [tuning](#tuning) and convert 
 Presently, all parts are monophonic, but you can call an instrument's `play` method multiple times at once for polyphony.
 
 Blooper implements two instruments: [Synthesizers](#synthesizers) and [Samplers](#samplers).
-Both instruments allow you to specify an [envelope](#envelopes) and a [dynamic range](#dynamicranges).
+Both instruments allow you to specify an [envelope](#envelopes) and a [dynamic range](#dynamic-ranges).
 
 ### Synthesizers
 
