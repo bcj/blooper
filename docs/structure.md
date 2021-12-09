@@ -46,11 +46,12 @@ If no key is supplied for a part, all notes will be treated as naturals unless s
 
 ### Measures
 
-A `Measure` (found in `blooper.parts`) represents one set of [notes/rests](#notes--rests) as well as any [time](#time-signatures), [tempo](#tempo), [dynamic](#dynamic), and [key](#key) changes to introduce into a part.
+A `Measure` (found in `blooper.parts`) represents one set of [notes/rests](#notes--rests) as well as any [time](#time-signatures), [tempo](#tempo), [dynamic](#dynamic), and [key](#key) changes to introduce into a part and accidentals that only apply to the end of the measure.
 
-All changes continue forward past the end of the measure.
+All changes continue forward past the end of the measure (except for accidentals).
 Time changes can only be intruded at the beginning of a Measure.
 For all other changes, a fractional number of beats needs to be supplied to specify when they occur within the measure.
+Accidentals will not apply to the next measure (including tied notes).
 
 Changes are not allowed to occur in the middle of a note or rest.
 If you want to specify a change partway through a note, you will need to split that note in two and use a [tie](#accents) to play those notes as one.

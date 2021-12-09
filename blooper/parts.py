@@ -94,12 +94,14 @@ class Measure:
         time: Optional[TimeSignature] = None,
         tempos: Optional[dict[Fraction, int]] = None,
         dynamics: Optional[dict[Fraction, Dynamic]] = None,
+        accidentals: Optional[dict[Fraction, dict[str, Fraction]]] = None,
         keys: Optional[dict[Fraction, Key]] = None,
     ):
         self.notes = list(notes) if notes else []
         self.time = time
         self.tempos = tempos or {}
         self.dynamics = dynamics or {}
+        self.accidentals = accidentals or {}
         self.keys = keys or {}
 
     def length(self) -> Fraction:
@@ -114,6 +116,7 @@ class Measure:
         *,
         tempo: Optional[int] = None,
         dynamic: Optional[Dynamic] = None,
+        accidentals: Optional[dict[str, Fraction]] = None,
         key: Optional[Key] = None,
     ):
         """
@@ -133,6 +136,9 @@ class Measure:
 
             if dynamic:
                 self.dynamics[position] = dynamic
+
+            if accidentals:
+                self.accidentals[position] = accidentals
 
             if key:
                 self.keys[position] = key
@@ -182,7 +188,10 @@ class Measure:
 
         tempo_changes = sorted(self.tempos.items())
         dynamic_changes = sorted(self.dynamics.items())
+        measure_accidentals = sorted(self.accidentals.items())
         key_changes = sorted(self.keys.items())
+
+        accidentals = {}
 
         count = len(notes)
         for index, note in enumerate(notes, 1):
@@ -214,6 +223,21 @@ class Measure:
                     raise ValueError(
                         f"Error at beat {self._position(state.time, change_position)}: "
                         "Dynamic change after measure."
+                    )
+
+            if measure_accidentals:
+                change_position = measure_accidentals[0][0]
+                if change_position < position:
+                    raise ValueError(
+                        f"Error at beat {self._position(state.time, change_position)}: "
+                        "Accidental added mid-note. Use a tie."
+                    )
+                elif change_position == position:
+                    accidentals.update(measure_accidentals.pop(0)[1])
+                elif index == count:
+                    raise ValueError(
+                        f"Error at beat {self._position(state.time, change_position)}: "
+                        "Accidental after measure."
                     )
 
             if key_changes:
@@ -250,7 +274,7 @@ class Measure:
                     state.time.beat_size, tailoff_factor=state.tailoff_factor
                 )
 
-                pitch = state.key.in_key(pitch)
+                pitch = state.key.in_key(pitch, accidentals.get(pitch.pitch_class))
 
                 yield Note(duration, pitch, dynamic or state.dynamic, accent)
 
@@ -299,7 +323,11 @@ class Part:
         sample_rate: how many samples the recording will use for each second.
         """
         state = State(
-            self.time, self.tempo, self.dynamic, self.key, None, self._tailoff_factor
+            self.time,
+            self.tempo,
+            self.dynamic,
+            self.key,
+            tailoff_factor=self._tailoff_factor,
         )
 
         tied_index = 0

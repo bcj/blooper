@@ -55,11 +55,12 @@ class Key:
         return self.accidentals.get(pitch_class, NATURAL)
 
     @cache
-    def in_key(self, pitch: Pitch) -> Pitch:
+    def in_key(self, pitch: Pitch, accidental: Optional[Fraction] = None) -> Pitch:
         if pitch.accidental is None:
-            return Pitch(
-                pitch.order, pitch.pitch_class, self.accidental(pitch.pitch_class)
-            )
+            if accidental is None:
+                accidental = self.accidental(pitch.pitch_class)
+
+            return Pitch(pitch.order, pitch.pitch_class, accidental)
 
         return pitch
 

@@ -40,6 +40,7 @@ def test_measure():
         key=Key.new("A", True, flats=("A",)),
         tempo=Tempo.LARGHETO,
         dynamic=forte,
+        accidentals={"A": FLAT, "C": SHARP},
     )
     assert measure.notes == [
         Note(Fraction(1, 4), Pitch(4, "A")),
@@ -49,6 +50,7 @@ def test_measure():
     assert measure.keys == {Fraction(1, 2): Key.new("A", True, flats=("A",))}
     assert measure.tempos == {Fraction(1, 2): Tempo.LARGHETO}
     assert measure.dynamics == {Fraction(1, 2): forte}
+    assert measure.accidentals == {Fraction(1, 2): {"A": FLAT, "C": SHARP}}
 
     # position
     assert Measure._position(TimeSignature.new(4, 4), Fraction(0, 1)) == "0"
@@ -65,7 +67,7 @@ def test_measure():
         Note(Fraction(1, 8), Pitch(4, "A")),
     ]
     assert list(
-        Measure(notes).play(
+        Measure(notes, accidentals={Fraction(1, 4): {"A": FLAT}}).play(
             State(
                 TimeSignature.new(4, 4),
                 120,
@@ -77,7 +79,7 @@ def test_measure():
         Note(Fraction(1, 4), Pitch(4, "A", NATURAL), mezzo_forte),
         Note(Fraction(1, 4), Pitch(4, "B", NATURAL), forte),
         Note(Fraction(1, 8), Pitch(4, "A", SHARP), mezzo_forte),
-        Note(Fraction(1, 8), Pitch(4, "A", NATURAL), mezzo_forte),
+        Note(Fraction(1, 8), Pitch(4, "A", FLAT), mezzo_forte),
         Rest(Fraction(1, 4)),
     ]
 
@@ -186,6 +188,15 @@ def test_measure():
                 tailoff_factor=Fraction(0, 1),
             )
         )
+        accidentals_iterator = Measure(notes, accidentals={fraction: {"C": FLAT}}).play(
+            State(
+                TimeSignature.new(4, 4),
+                120,
+                mezzo_forte,
+                KEYS["A♭ Major"],
+                tailoff_factor=Fraction(0, 1),
+            )
+        )
         key_iterator = Measure(notes, keys={fraction: KEYS["C Major"]}).play(
             State(
                 TimeSignature.new(4, 4),
@@ -199,6 +210,7 @@ def test_measure():
         for _ in range(skips):
             next(tempo_iterator)
             next(dynamic_iterator)
+            next(accidentals_iterator)
             next(key_iterator)
 
         with pytest.raises(ValueError):
@@ -206,6 +218,9 @@ def test_measure():
 
         with pytest.raises(ValueError):
             next(dynamic_iterator)
+
+        with pytest.raises(ValueError):
+            next(accidentals_iterator)
 
         with pytest.raises(ValueError):
             next(key_iterator)

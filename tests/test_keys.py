@@ -5,7 +5,7 @@ import pytest
 
 def test_key():
     from blooper.parts import Key
-    from blooper.pitch import FLAT, NATURAL, SHARP, Pitch
+    from blooper.pitch import DOUBLE_FLAT, FLAT, NATURAL, SHARP, Pitch
 
     key = Key("C", True, {})
 
@@ -95,9 +95,15 @@ def test_key():
 
     for pitch_class in sharps:
         assert key.in_key(Pitch(3, pitch_class)) == Pitch(3, pitch_class, SHARP)
+        assert key.in_key(Pitch(3, pitch_class), DOUBLE_FLAT) == Pitch(
+            3, pitch_class, DOUBLE_FLAT
+        )
 
     for pitch_class in flats:
         assert key.in_key(Pitch(3, pitch_class)) == Pitch(3, pitch_class, FLAT)
+        assert key.in_key(Pitch(3, pitch_class), DOUBLE_FLAT) == Pitch(
+            3, pitch_class, DOUBLE_FLAT
+        )
 
     key.in_key(Pitch(3, "f")) == Pitch(3, "f", NATURAL)
 
