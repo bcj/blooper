@@ -299,8 +299,13 @@ def test_measure():
     with pytest.raises(ValueError):
         list(
             measure.play(
-                State(TimeSignature.new(1, 4), 120, mezzo_forte, KEYS["A♭ Major"]),
-                Accent.SLUR,
+                State(
+                    TimeSignature.new(1, 4),
+                    120,
+                    mezzo_forte,
+                    KEYS["A♭ Major"],
+                    Accent.SLUR,
+                ),
             )
         )
 

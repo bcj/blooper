@@ -78,6 +78,7 @@ class State:
     tempo: int
     dynamic: Dynamic
     key: Optional[Key] = None
+    previous_accent: Optional[Accent] = None
     tailoff_factor: Fraction = TAILOFF_FACTOR
 
 
@@ -155,7 +156,6 @@ class Measure:
     def play(
         self,
         state: State,
-        previous: Optional[Accent] = None,
     ) -> Iterable[Note | Rest]:
         """
         Iterate over all notes and rests in a measure, modifying the
@@ -239,10 +239,11 @@ class Measure:
                             f"invalid accent for a long note: {note.accent}"
                         )
 
-                    if not note.accent.can_follow(previous):
+                    if not note.accent.can_follow(state.previous_accent):
                         raise ValueError(
                             f"Error at beat {self._position(state.time, position)}: "
-                            f"accent {note.accent} can not follow {previous}"
+                            f"accent {note.accent} can not follow "
+                            f"{state.previous_accent}"
                         )
 
                 duration, pitch, dynamic, accent = note.components(
@@ -257,7 +258,7 @@ class Measure:
                     yield Rest(note.duration - duration)
 
                 position += note.duration
-                previous = note.accent
+                state.previous_accent = note.accent
             else:
                 # we could catch slur-to-rest here but we can't catch
                 # them between measures or at the end of a song so we
@@ -265,7 +266,7 @@ class Measure:
 
                 yield note
                 position += note.duration
-                previous = None
+                state.previous_accent = None
 
 
 @dataclass(frozen=True)
@@ -298,10 +299,9 @@ class Part:
         sample_rate: how many samples the recording will use for each second.
         """
         state = State(
-            self.time, self.tempo, self.dynamic, self.key, self._tailoff_factor
+            self.time, self.tempo, self.dynamic, self.key, None, self._tailoff_factor
         )
 
-        previous_accent = None
         tied_index = 0
         tied_tone = None
 
@@ -315,7 +315,7 @@ class Part:
                 measure = Measure(measure)
 
             try:
-                for note in measure.play(state, previous_accent):
+                for note in measure.play(state):
                     if tempo != state.tempo:
                         tempo = state.tempo
                         samples_per_beat = round(samples_per_minute / tempo)
@@ -329,8 +329,6 @@ class Part:
                     if isinstance(note, Rest):
                         if tied_tone is not None:
                             raise ValueError("Cannot slur/tie into a rest")
-
-                        previous_accent = None
                     else:
                         tone = Tone(
                             samples,
@@ -364,8 +362,6 @@ class Part:
                         else:
                             tied_tone = None
                             yield start_index, tone
-
-                        previous_accent = tone.accent
 
                     index += samples
             except Exception:
