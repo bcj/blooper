@@ -323,6 +323,69 @@ def test_synthesizer():
     )
     assert synthesizer.envelope == default_envelope
 
+    # okay, here's the deal. I want to test that concurrance is handled
+    # correctly but I absolutely don't want to write the tests for that.
+    # Testing that it is the same as multiple parts should be good
+    # enough
+    from blooper.mixers import Mixer
+
+    multi_pitch = Mixer.solo(
+        Synthesizer(),
+        Part(
+            [
+                [
+                    Note(Fraction(1, 4), Pitch(4, "C")),
+                    Note(Fraction(1, 4), (Pitch(4, "C"), Pitch(4, "E"))),
+                    Note(Fraction(1, 4), (Pitch(4, "C"), Pitch(4, "E"), Pitch(4, "F"))),
+                    Note(Fraction(1, 4), (Pitch(4, "C"), Pitch(4, "G"))),
+                ]
+            ]
+        ),
+    )
+
+    multi_part = Mixer.even(
+        (
+            Synthesizer(),
+            Part(
+                [
+                    [
+                        Note(Fraction(1, 4), Pitch(4, "C")),
+                        Note(Fraction(1, 4), Pitch(4, "C")),
+                        Note(Fraction(1, 4), Pitch(4, "C")),
+                        Note(Fraction(1, 4), Pitch(4, "C")),
+                    ]
+                ]
+            ),
+        ),
+        (
+            Synthesizer(),
+            Part(
+                [
+                    [
+                        Rest(Fraction(1, 4)),
+                        Note(Fraction(1, 4), Pitch(4, "E")),
+                        Note(Fraction(1, 4), Pitch(4, "E")),
+                        Note(Fraction(1, 4), Pitch(4, "G")),
+                    ]
+                ]
+            ),
+        ),
+        (
+            Synthesizer(),
+            Part(
+                [
+                    [
+                        Rest(Fraction(1, 2)),
+                        Note(Fraction(1, 4), Pitch(4, "F")),
+                        Rest(Fraction(1, 4)),
+                    ]
+                ]
+            ),
+        ),
+    )
+
+    assert list(multi_pitch.mix(40_000, 2, 100)) == list(multi_part.mix(40_000, 2, 100))
+
 
 def test_sampler():
     from blooper.dynamics import DynamicRange, Homogeneous
@@ -538,10 +601,10 @@ def test_sampler():
         sampler = Sampler(paths, tuning=tuning, envelope=envelope, loop=False)
         part = FakePart(
             [
-                (3, Tone(3, Pitch(3, "A"), Dynamic.from_name("forte"))),
-                (7, Tone(3, Pitch(4, "A"), Dynamic.from_name("forte"))),
-                (11, Tone(3, Pitch(5, "A"), Dynamic.from_name("forte"))),
-                (14, Tone(3, Pitch(4, "A"), Dynamic.from_name("forte"))),
+                (3, Tone(3, (Pitch(3, "A"),), Dynamic.from_name("forte"))),
+                (7, Tone(3, (Pitch(4, "A"),), Dynamic.from_name("forte"))),
+                (11, Tone(3, (Pitch(5, "A"),), Dynamic.from_name("forte"))),
+                (14, Tone(3, (Pitch(4, "A"),), Dynamic.from_name("forte"))),
             ]
         )
 
@@ -643,3 +706,69 @@ def test_sampler():
                 (0.5, 0.5),
             ],
         )
+
+    # okay, here's the deal. I want to test that concurrance is handled
+    # correctly but I absolutely don't want to write the tests for that.
+    # Testing that it is the same as multiple parts should be good
+    # enough
+    from blooper.mixers import Mixer
+    from blooper.notes import Note, Rest
+    from blooper.parts import Part
+
+    multi_pitch = Mixer.solo(
+        sampler,
+        Part(
+            [
+                [
+                    Note(Fraction(1, 4), Pitch(4, "A")),
+                    Note(Fraction(1, 4), (Pitch(4, "A"), Pitch(3, "A"))),
+                    # Should be treated as separate even though A2 isn't available
+                    Note(Fraction(1, 4), (Pitch(4, "A"), Pitch(3, "A"), Pitch(2, "A"))),
+                    Note(Fraction(1, 4), (Pitch(4, "A"), Pitch(3, "A"))),
+                ]
+            ]
+        ),
+    )
+
+    multi_part = Mixer.even(
+        (
+            sampler,
+            Part(
+                [
+                    [
+                        Note(Fraction(1, 4), Pitch(4, "A")),
+                        Note(Fraction(1, 4), Pitch(4, "A")),
+                        Note(Fraction(1, 4), Pitch(4, "A")),
+                        Note(Fraction(1, 4), Pitch(4, "A")),
+                    ]
+                ]
+            ),
+        ),
+        (
+            sampler,
+            Part(
+                [
+                    [
+                        Rest(Fraction(1, 4)),
+                        Note(Fraction(1, 4), Pitch(3, "A")),
+                        Note(Fraction(1, 4), Pitch(3, "A")),
+                        Note(Fraction(1, 4), Pitch(3, "A")),
+                    ]
+                ]
+            ),
+        ),
+        (
+            sampler,
+            Part(
+                [
+                    [
+                        Rest(Fraction(1, 2)),
+                        Note(Fraction(1, 4), Pitch(2, "A")),
+                        Rest(Fraction(1, 4)),
+                    ]
+                ]
+            ),
+        ),
+    )
+
+    assert list(multi_pitch.mix(40_000, 2, 100)) == list(multi_part.mix(40_000, 2, 100))

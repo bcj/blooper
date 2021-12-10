@@ -7,22 +7,22 @@ import pytest
 def test_mixer():
     from blooper.instruments import Synthesizer
     from blooper.mixers import Mixer
-    from blooper.notes import Dynamic, Rest
+    from blooper.notes import Dynamic, Note, Rest
     from blooper.parts import Part, Tempo, TimeSignature
     from blooper.pitch import Pitch, Tuning
 
     tuning = Tuning(Pitch(0, "A"), 10)
     part = Part(
-        TimeSignature(4, 4),
-        Tempo.ALLEGRO_MODERATO,
-        Dynamic.from_name("fortissimo"),
-        [[Rest(Fraction(1, 1))]],
+        [[Note(Fraction(1, 1), Pitch(4, "A"))]],
+        time=TimeSignature(4, 4),
+        tempo=Tempo.ALLEGRO_MODERATO,
+        dynamic=Dynamic.from_name("fortissimo"),
     )
     part2 = Part(
-        TimeSignature(4, 4),
-        Tempo.GRAVE,
-        Dynamic.from_name("piano"),
-        [[Rest(Fraction(1, 2)), Rest(Fraction(1, 2))]],
+        [[Note(Fraction(1, 2), Pitch(4, "A")), Rest(Fraction(1, 2))]],
+        time=TimeSignature(4, 4),
+        tempo=Tempo.GRAVE,
+        dynamic=Dynamic.from_name("piano"),
     )
 
     synthesizer = Synthesizer(tuning=tuning)

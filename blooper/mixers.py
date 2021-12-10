@@ -31,8 +31,8 @@ class Mixer:
         part: the piece being played by the instrument
         volume: the volume to mix the instrument at
         """
-
-        return cls((instrument,), (part,), (volume,))
+        concurrence = part.concurrence() or 1
+        return cls((instrument,), (part,), (volume / concurrence,))
 
     @classmethod
     def even(cls, *inputs: tuple[Instrument, Part], volume: float = 1) -> Mixer:
@@ -47,7 +47,8 @@ class Mixer:
 
         instruments = tuple(instrument for instrument, _ in inputs)
         parts = tuple(part for _, part in inputs)
-        volumes = ((volume / len(inputs)),) * len(inputs)
+        concurrence = max(sum(part.concurrence() for part in parts), 1)
+        volumes = ((volume / concurrence),) * concurrence
 
         return cls(instruments, parts, volumes)
 

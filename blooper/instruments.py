@@ -9,7 +9,7 @@ import math
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import cache
-from itertools import chain, islice, repeat
+from itertools import chain, islice, repeat, zip_longest
 from pathlib import Path
 from random import choice
 from typing import Callable, Generator, Iterable, Iterator, Optional
@@ -137,40 +137,52 @@ class Synthesizer(Instrument):
         else:
             raise NotImplementedError(f"Unsupported channel count: {channels}")
 
-        wave: Optional[Waveform] = None
+        waves: list[Waveform] = []
         volumes: Iterable[float] = []
         index = 0
         start = 0.0
 
         for next_index, tone in part.tones(sample_rate):
             if index < next_index:
-                if wave is None:
+                if not waves:
                     zero = (0,) * channels
                     for _ in range(next_index - index):
                         yield zero
 
                     index = next_index
-                    start = 0
+                    start = 0.0
                 else:
                     padded = then_zeroes(volumes)
 
                     for _ in range(next_index - index):
                         volume = next(padded)
-                        start = wave.sample() * volume
+                        start = sum(wave.sample() for wave in waves) * volume
                         yield fill_channels(start)
 
                     index = next_index
             else:
                 start = 0
 
-            frequency = self.tuning.pitch_to_frequency(tone.pitch)
-            phase = None if wave is None else wave.phase
-            wave = Waveform(frequency, sample_rate, wave=self.wave, phase=phase)
+            old_waves = waves
+            waves = []
+            for pitch, old_wave in zip_longest(tone.pitches, old_waves):
+                if pitch is None:
+                    break
+
+                waves.append(
+                    Waveform(
+                        self.tuning.pitch_to_frequency(pitch),
+                        sample_rate,
+                        wave=self.wave,
+                        phase=old_wave.phase if old_wave else None,
+                    )
+                )
+
             volumes = self.envelope.volumes(tone, sample_rate, start)
 
-        if wave is not None:
+        if waves:
             for volume in self.envelope.volumes(tone, sample_rate, start):
-                yield fill_channels(wave.sample() * volume)
+                yield fill_channels(sum(wave.sample() for wave in waves) * volume)
 
 
 class Sampler(Instrument):
@@ -293,55 +305,72 @@ class Sampler(Instrument):
         else:
             raise NotImplementedError(f"Unsupported channel count: {channels}")
 
-        signal: Optional[Iterable[tuple[float, ...]]] = None
-        actual_channels = 0
+        signals: list[Iterable[tuple[float, ...]]] = []
+        functions: list[Callable[[tuple[float, ...]], tuple[float, ...]]] = []
         index = 0
         volumes: Iterable[float] = []
         start = 0.0
+        zero = (0,) * channels
 
         for next_index, tone in part.tones(sample_rate):
             while index < next_index:
-                if signal is None:
-                    zero = (0,) * channels
+                if signals:
+                    for sample_sets, volume in zip(
+                        zip_longest(
+                            *[islice(signal, next_index - index) for signal in signals]
+                        ),
+                        volumes,
+                    ):
+                        total = [0.0] * channels
+                        for set_index, samples in enumerate(sample_sets):
+                            if samples:
+                                for channel, value in enumerate(
+                                    functions[set_index](samples)
+                                ):
+                                    total[channel] += value
+
+                        yield tuple(total)
+                        index += 1
+                        start = volume
+                    signals = []
+                    functions = []
+                else:
                     for _ in range(next_index - index):
                         yield zero
 
                     index = next_index
                     start = 0
-                else:
-                    function = mixer[actual_channels]
-                    for samples, volume in zip(
-                        islice(signal, next_index - index), volumes
-                    ):
-                        yield function(samples)
-                        index += 1
-                        start = volume
 
-                    signal = None
+            signals = []
+            functions = []
+            # Used just for keeping track of start volume
+            volumes = self.envelope.volumes(tone, sample_rate, start)
 
-            frequency = self.tuning.pitch_to_frequency(tone.pitch)
-            compatible = list(
-                self.compatible_samples(frequency, sample_rate, tone.dynamic)
-            )
-
-            if compatible:
-                sample = choice(compatible)
-                signal = sample.load(
-                    sample_rate,
-                    self.envelope.volumes(tone, sample_rate, start),
-                    loop=self.loop,
+            for pitch in tone.pitches:
+                frequency = self.tuning.pitch_to_frequency(pitch)
+                compatible = list(
+                    self.compatible_samples(frequency, sample_rate, tone.dynamic)
                 )
-                actual_channels = sample.channels
 
-                # Used just for keeping track of start volume
-                volumes = self.envelope.volumes(tone, sample_rate, start)
-            else:
-                signal = None
-                actual_channels = 0
+                if compatible:
+                    sample = choice(compatible)
+                    signal = sample.load(
+                        sample_rate,
+                        self.envelope.volumes(tone, sample_rate, start),
+                        loop=self.loop,
+                    )
+                    signals.append(signal)
+                    functions.append(mixer[sample.channels])
 
-        if signal is not None:
-            for samples in signal:
-                yield function(samples)
+        if signals:
+            for sample_sets in zip_longest(*signals):
+                total = [0.0] * channels
+                for set_index, samples in enumerate(sample_sets):
+                    if samples:
+                        for channel, value in enumerate(functions[set_index](samples)):
+                            total[channel] += value
+
+                        yield tuple(total)
 
     @staticmethod
     def map_samples(

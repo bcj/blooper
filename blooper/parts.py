@@ -104,6 +104,18 @@ class Measure:
         self.accidentals = accidentals or {}
         self.keys = keys or {}
 
+    def concurrence(self) -> int:
+        """
+        How many concurrent tones are played in the measure
+        """
+        maximum = 0
+
+        for note in self.notes:
+            if isinstance(note, Note):
+                maximum = max(maximum, len(note.pitches))
+
+        return maximum
+
     def length(self) -> Fraction:
         """
         The current length of the measure
@@ -270,13 +282,16 @@ class Measure:
                             f"{state.previous_accent}"
                         )
 
-                duration, pitch, dynamic, accent = note.components(
+                duration, pitches, dynamic, accent = note.components(
                     state.time.beat_size, tailoff_factor=state.tailoff_factor
                 )
 
-                pitch = state.key.in_key(pitch, accidentals.get(pitch.pitch_class))
+                pitches = tuple(
+                    state.key.in_key(pitch, accidentals.get(pitch.pitch_class))
+                    for pitch in pitches
+                )
 
-                yield Note(duration, pitch, dynamic or state.dynamic, accent)
+                yield Note(duration, pitches, dynamic or state.dynamic, accent)
 
                 if duration != note.duration:
                     yield Rest(note.duration - duration)
@@ -293,7 +308,6 @@ class Measure:
                 state.previous_accent = None
 
 
-@dataclass(frozen=True)
 class Part:
     """
     A collection of measures containing notes as well as the key and
@@ -303,12 +317,31 @@ class Part:
     NOTE: Polyphony is not currently supported on a per-part basis.
     """
 
-    measures: list[Measure | list[Note | Rest]]
-    time: TimeSignature = COMMON_TIME
-    tempo: int = Tempo.ALLEGRO_MODERATO
-    dynamic: Dynamic = Dynamic.from_symbol("mf")
-    key: Optional[Key] = None
-    _tailoff_factor: Fraction = TAILOFF_FACTOR
+    def __init__(
+        self,
+        measures: list[Measure | list[Note | Rest]],
+        *,
+        time: TimeSignature = COMMON_TIME,
+        tempo: int = Tempo.ALLEGRO_MODERATO,
+        dynamic: Dynamic = Dynamic.from_symbol("mf"),
+        key: Optional[Key] = None,
+        _tailoff_factor: Fraction = TAILOFF_FACTOR,
+    ):
+        self.measures = [
+            measure if isinstance(measure, Measure) else Measure(measure)
+            for measure in measures
+        ]
+        self.time = time
+        self.tempo = tempo
+        self.dynamic = dynamic
+        self.key = key
+        self._tailoff_factor = _tailoff_factor
+
+    def concurrence(self) -> int:
+        """
+        How many concurrent tones are played in the part
+        """
+        return max(measure.concurrence() for measure in self.measures)
 
     def tones(
         self,
@@ -339,9 +372,6 @@ class Part:
 
         index = 0
         for measure_index, measure in enumerate(self.measures):
-            if not isinstance(measure, Measure):
-                measure = Measure(measure)
-
             try:
                 for note in measure.play(state):
                     if tempo != state.tempo:
@@ -360,7 +390,7 @@ class Part:
                     else:
                         tone = Tone(
                             samples,
-                            note.pitch,
+                            note.pitches,
                             # We know measure is supplying the dynamic
                             cast(Dynamic, note.dynamic),
                             note.accent,
@@ -368,14 +398,14 @@ class Part:
 
                         start_index = index
                         if tied_tone:
-                            if tied_tone.pitch != tone.pitch:
+                            if set(tied_tone.pitches) != set(tone.pitches):
                                 # It was a slur not a tie
                                 yield tied_index, tied_tone
                                 tied_tone = None
                             else:
                                 tone = Tone(
                                     tied_tone.duration + tone.duration,
-                                    tone.pitch,
+                                    tone.pitches,
                                     # If there's a dynamic change over a tied
                                     # note we're currently ignoring it. sorry
                                     tied_tone.dynamic,

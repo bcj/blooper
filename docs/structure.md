@@ -63,6 +63,9 @@ If you do not need to specify any kind of change in a measure, you can supply me
 
 A `Note` (found in `blooper.notes`) contains four components: a duration (as a fractional number of beats), a [pitch](#pitch), an optional [dynamic](#dynamic) (if not supplied, the part's current dynamic is used), and an optional [accent](#accents).
 
+A tuple containing multiple pitches can also be passed to allow chording.
+If you need notes with different accents/durations you'll need to use multiple parts.
+
 A `Rest` (also found in `blooper.notes`) only contains a duration.
 
 ##### Pitch

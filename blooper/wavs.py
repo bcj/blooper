@@ -214,7 +214,7 @@ class WavSample(SampleFile):
 
                 yield tuple(volume * sample / count / wave_range for sample in samples)
 
-                if sample_index == self._num_samples:
+                if sample_index == self._num_samples and not loop:
                     break
 
     def __hash__(self) -> int:

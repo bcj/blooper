@@ -160,18 +160,25 @@ class Note:
     """
 
     duration: Fraction  # As a fraction of a whole note
-    pitch: Pitch
+    pitch: Pitch | tuple[Pitch, ...]
     # As an accent on the specific note. Will not change the dynamic
     # going forward and will be played at the piece's current dynamic.
     dynamic: Optional[Dynamic] = None
     accent: Optional[Accent] = None
+
+    @property
+    def pitches(self) -> tuple[Pitch, ...]:
+        if isinstance(self.pitch, Pitch):
+            return (self.pitch,)
+
+        return self.pitch
 
     def components(
         self,
         beat_size: Fraction,
         *,
         tailoff_factor: Fraction = TAILOFF_FACTOR,
-    ) -> tuple[Fraction, Pitch, Optional[Dynamic], Optional[Accent]]:
+    ) -> tuple[Fraction, tuple[Pitch, ...], Optional[Dynamic], Optional[Accent]]:
         """
         Get the components of a note, resolving any temporal accents by
         changing the duration.
@@ -203,7 +210,7 @@ class Note:
         if regular_length:
             duration -= min(beat_size, duration) * tailoff_factor
 
-        return duration, self.pitch, self.dynamic, accent
+        return duration, self.pitches, self.dynamic, accent
 
 
 @dataclass(frozen=True)
@@ -227,7 +234,7 @@ class Tone:
     """
 
     duration: int
-    pitch: Pitch
+    pitches: tuple[Pitch, ...]
     dynamic: Dynamic
     accent: Optional[Accent] = None
 
