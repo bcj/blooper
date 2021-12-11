@@ -207,7 +207,7 @@ def main(input_args: Optional[list[str]] = None):
         for beats, pitch in pitches:
             duration = length * beats
             total += beats
-            notes.append(Rest(duration) if pitch is None else Note(duration, pitch))
+            notes.append(Rest(duration) if pitch is None else Note.new(duration, pitch))
 
         inputs.append(
             (

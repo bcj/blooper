@@ -406,6 +406,11 @@ def test_part():
     forte = Dynamic.from_symbol("f")
     fortissimo = Dynamic.from_symbol("ff")
 
+    assert Part([]).concurrence() == 0
+    assert Part([Measure([])]).concurrence() == 0
+    assert Part([Measure([Rest(Fraction(1, 4))])]).concurrence() == 0
+    assert Part([Measure([Note.new(Fraction(1, 4), Pitch(4, "A"))])]).concurrence() == 1
+
     part = Part(
         [
             Measure(

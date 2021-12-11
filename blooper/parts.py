@@ -287,15 +287,12 @@ class Measure:
                     state.time.beat_size, tailoff_factor=state.tailoff_factor
                 )
 
-                if isinstance(pitch, Chord):
-                    pitch = Chord(
-                        *(
-                            state.key.in_key(p, accidentals.get(p.pitch_class))
-                            for p in pitch.pitches
-                        )
+                pitch = Chord(
+                    *(
+                        state.key.in_key(p, accidentals.get(p.pitch_class))
+                        for p in pitch.pitches
                     )
-                else:
-                    pitch = state.key.in_key(pitch, accidentals.get(pitch.pitch_class))
+                )
 
                 yield Note(duration, Tone(pitch, dynamic or state.dynamic, accent))
 

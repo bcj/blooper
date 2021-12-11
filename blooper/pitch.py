@@ -130,9 +130,15 @@ class Pitch:
     pitch_class: str
     accidental: Optional[Fraction] = None
 
+    # These properties are passed to reduce the number of isinstance checks
+    # required between pitches and chords
     @property
     def concurrence(self):
         return 1
+
+    @property
+    def pitches(self) -> tuple[Pitch]:
+        return (self,)
 
     @classmethod
     def new(
@@ -221,6 +227,9 @@ class Chord:
     """
 
     def __init__(self, *pitches: Pitch):
+        if not len(pitches):
+            raise ValueError("At least one pitch must be supplied to chord")
+
         self.pitches = set(pitches)
 
     @property

@@ -91,11 +91,17 @@ def test_pitch():
 def test_chord():
     from blooper.pitch import FLAT, Chord, Pitch
 
+    with pytest.raises(ValueError):
+        Chord()
+
     assert Chord(Pitch(4, "A")) == Pitch(4, "A")
     assert Chord(Pitch(4, "A")) != Pitch(4, "A", FLAT)
     assert Chord(Pitch(4, "A")) != Chord(Pitch(4, "A"), Pitch("A", FLAT))
     assert Chord(Pitch(4, "A")) == Chord(Pitch(4, "A"), Pitch(4, "A"))
     assert Chord(Pitch(4, "A"), Pitch(4, "B")) == Chord(Pitch(4, "B"), Pitch(4, "A"))
+
+    # Hate writing the NotImplemented part of == checks.
+    assert Chord(Pitch(4, "A")) != (4, "A")
 
 
 def test_scale():

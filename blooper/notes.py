@@ -165,10 +165,7 @@ class Tone:
 
     @property
     def pitches(self) -> Iterable[Pitch]:
-        if isinstance(self.pitch, Pitch):
-            yield self.pitch
-        else:
-            yield from self.pitch.pitches
+        yield from self.pitch.pitches
 
 
 @dataclass(frozen=True)
@@ -181,7 +178,7 @@ class Note:
     tone: Tone
 
     @property
-    def concurrence(self):
+    def concurrence(self) -> int:
         return self.tone.pitch.concurrence
 
     def components(
@@ -243,7 +240,7 @@ class Rest:
     duration: Fraction
 
     @property
-    def concurrence(self):
+    def concurrence(self) -> int:
         return 0
 
 
