@@ -17,6 +17,7 @@ from typing import Generator, Iterable, NamedTuple, Optional, cast
 
 from blooper.keys import KEYS, Key
 from blooper.notes import TAILOFF_FACTOR, Accent, Dynamic, Note, Rest, Tone
+from blooper.pitch import Chord
 
 
 class TimeSignature(NamedTuple):
@@ -108,13 +109,10 @@ class Measure:
         """
         How many concurrent tones are played in the measure
         """
-        maximum = 0
+        if self.notes:
+            return max(note.concurrence for note in self.notes)
 
-        for note in self.notes:
-            if isinstance(note, Note):
-                maximum = max(maximum, len(note.pitches))
-
-        return maximum
+        return 0
 
     def length(self) -> Fraction:
         """
@@ -282,16 +280,21 @@ class Measure:
                             f"{state.previous_accent}"
                         )
 
-                duration, pitches, dynamic, accent = note.components(
+                duration, pitch, dynamic, accent = note.components(
                     state.time.beat_size, tailoff_factor=state.tailoff_factor
                 )
 
-                pitches = tuple(
-                    state.key.in_key(pitch, accidentals.get(pitch.pitch_class))
-                    for pitch in pitches
-                )
+                if isinstance(pitch, Chord):
+                    pitch = Chord(
+                        *(
+                            state.key.in_key(p, accidentals.get(p.pitch_class))
+                            for p in pitch.pitches
+                        )
+                    )
+                else:
+                    pitch = state.key.in_key(pitch, accidentals.get(pitch.pitch_class))
 
-                yield Note(duration, pitches, dynamic or state.dynamic, accent)
+                yield Note(duration, pitch, dynamic or state.dynamic, accent)
 
                 if duration != note.duration:
                     yield Rest(note.duration - duration)
@@ -341,6 +344,9 @@ class Part:
         """
         How many concurrent tones are played in the part
         """
+        if not self.measures:
+            return 0
+
         return max(measure.concurrence() for measure in self.measures)
 
     def tones(
@@ -390,7 +396,7 @@ class Part:
                     else:
                         tone = Tone(
                             samples,
-                            note.pitches,
+                            note.pitch,
                             # We know measure is supplying the dynamic
                             cast(Dynamic, note.dynamic),
                             note.accent,
@@ -398,14 +404,14 @@ class Part:
 
                         start_index = index
                         if tied_tone:
-                            if set(tied_tone.pitches) != set(tone.pitches):
+                            if tied_tone.pitch != tone.pitch:
                                 # It was a slur not a tie
                                 yield tied_index, tied_tone
                                 tied_tone = None
                             else:
                                 tone = Tone(
                                     tied_tone.duration + tone.duration,
-                                    tone.pitches,
+                                    tone.pitch,
                                     # If there's a dynamic change over a tied
                                     # note we're currently ignoring it. sorry
                                     tied_tone.dynamic,

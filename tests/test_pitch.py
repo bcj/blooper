@@ -88,6 +88,16 @@ def test_pitch():
     assert str(Pitch(0, "J", Fraction(-1, 2))) == "J₀♭"
 
 
+def test_chord():
+    from blooper.pitch import FLAT, Chord, Pitch
+
+    assert Chord(Pitch(4, "A")) == Pitch(4, "A")
+    assert Chord(Pitch(4, "A")) != Pitch(4, "A", FLAT)
+    assert Chord(Pitch(4, "A")) != Chord(Pitch(4, "A"), Pitch("A", FLAT))
+    assert Chord(Pitch(4, "A")) == Chord(Pitch(4, "A"), Pitch(4, "A"))
+    assert Chord(Pitch(4, "A"), Pitch(4, "B")) == Chord(Pitch(4, "B"), Pitch(4, "A"))
+
+
 def test_scale():
     from blooper.pitch import (
         ARAB_SCALE,

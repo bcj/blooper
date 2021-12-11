@@ -15,7 +15,7 @@ def test_time_signature():
 def test_measure():
     from blooper.notes import Accent, Dynamic, Note, Rest
     from blooper.parts import KEYS, Key, Measure, State, Tempo, TimeSignature
-    from blooper.pitch import FLAT, NATURAL, SHARP, Pitch
+    from blooper.pitch import FLAT, NATURAL, SHARP, Chord, Pitch
 
     assert Measure().notes == []
     assert Measure((Rest(Fraction(x, 4)) for x in range(1, 4))).notes == [
@@ -40,7 +40,10 @@ def test_measure():
     )
     assert (
         Measure(
-            [Rest(Fraction(1, 1)), Note(Fraction(1, 1), (Pitch(4, "A"), Pitch(4, "B")))]
+            [
+                Rest(Fraction(1, 1)),
+                Note(Fraction(1, 1), Chord(Pitch(4, "A"), Pitch(4, "B"))),
+            ]
         ).concurrence()
         == 2
     )
@@ -93,10 +96,10 @@ def test_measure():
             ),
         )
     ) == [
-        Note(Fraction(1, 4), (Pitch(4, "A", NATURAL),), mezzo_forte),
-        Note(Fraction(1, 4), (Pitch(4, "B", NATURAL),), forte),
-        Note(Fraction(1, 8), (Pitch(4, "A", SHARP),), mezzo_forte),
-        Note(Fraction(1, 8), (Pitch(4, "A", FLAT),), mezzo_forte),
+        Note(Fraction(1, 4), Pitch(4, "A", NATURAL), mezzo_forte),
+        Note(Fraction(1, 4), Pitch(4, "B", NATURAL), forte),
+        Note(Fraction(1, 8), Pitch(4, "A", SHARP), mezzo_forte),
+        Note(Fraction(1, 8), Pitch(4, "A", FLAT), mezzo_forte),
         Rest(Fraction(1, 4)),
     ]
 
@@ -116,10 +119,10 @@ def test_measure():
             ),
         )
     ) == [
-        Note(Fraction(1, 4), (Pitch(4, "A", FLAT),), mezzo_forte),
-        Note(Fraction(1, 4), (Pitch(4, "B", FLAT),), forte),
-        Note(Fraction(1, 8), (Pitch(4, "A", SHARP),), piano),
-        Note(Fraction(1, 8), (Pitch(4, "A", NATURAL),), piano),
+        Note(Fraction(1, 4), Pitch(4, "A", FLAT), mezzo_forte),
+        Note(Fraction(1, 4), Pitch(4, "B", FLAT), forte),
+        Note(Fraction(1, 8), Pitch(4, "A", SHARP), piano),
+        Note(Fraction(1, 8), Pitch(4, "A", NATURAL), piano),
         Rest(Fraction(1, 2)),
     ]
 
@@ -267,17 +270,17 @@ def test_measure():
             )
         )
     ) == [
-        Note(Fraction(1, 4), (Pitch(4, "A", FLAT),), mezzo_forte, Accent.ACCENT),
-        Note(Fraction(1, 8), (Pitch(4, "A", FLAT),), mezzo_forte, Accent.ACCENT),
+        Note(Fraction(1, 4), Pitch(4, "A", FLAT), mezzo_forte, Accent.ACCENT),
+        Note(Fraction(1, 8), Pitch(4, "A", FLAT), mezzo_forte, Accent.ACCENT),
         Rest(Fraction(1, 8)),
-        Note(Fraction(1, 4), (Pitch(4, "A", FLAT),), mezzo_forte, Accent.SLUR),
-        Note(Fraction(1, 4), (Pitch(4, "A", FLAT),), mezzo_forte, None),
-        Note(Fraction(1, 8), (Pitch(4, "A", FLAT),), mezzo_forte, None),
+        Note(Fraction(1, 4), Pitch(4, "A", FLAT), mezzo_forte, Accent.SLUR),
+        Note(Fraction(1, 4), Pitch(4, "A", FLAT), mezzo_forte, None),
+        Note(Fraction(1, 8), Pitch(4, "A", FLAT), mezzo_forte, None),
         Rest(Fraction(1, 8)),
-        Note(Fraction(1, 16), (Pitch(4, "A", FLAT),), mezzo_forte, None),
+        Note(Fraction(1, 16), Pitch(4, "A", FLAT), mezzo_forte, None),
         Rest(Fraction(3, 16)),
-        Note(Fraction(1, 4), (Pitch(4, "A", FLAT),), mezzo_forte, None),
-        Note(Fraction(1, 2), (Pitch(4, "A", FLAT),), mezzo_forte, None),
+        Note(Fraction(1, 4), Pitch(4, "A", FLAT), mezzo_forte, None),
+        Note(Fraction(1, 2), Pitch(4, "A", FLAT), mezzo_forte, None),
     ]
 
     # with tail-off
@@ -302,19 +305,19 @@ def test_measure():
             )
         )
     ) == [
-        Note(Fraction(3, 16), (Pitch(4, "A", FLAT),), mezzo_forte, Accent.ACCENT),
+        Note(Fraction(3, 16), Pitch(4, "A", FLAT), mezzo_forte, Accent.ACCENT),
         Rest(Fraction(1, 16)),
-        Note(Fraction(1, 8), (Pitch(4, "A", FLAT),), mezzo_forte, Accent.ACCENT),
+        Note(Fraction(1, 8), Pitch(4, "A", FLAT), mezzo_forte, Accent.ACCENT),
         Rest(Fraction(1, 8)),
-        Note(Fraction(1, 4), (Pitch(4, "A", FLAT),), mezzo_forte, Accent.SLUR),
-        Note(Fraction(3, 16), (Pitch(4, "A", FLAT),), mezzo_forte, None),
+        Note(Fraction(1, 4), Pitch(4, "A", FLAT), mezzo_forte, Accent.SLUR),
+        Note(Fraction(3, 16), Pitch(4, "A", FLAT), mezzo_forte, None),
         Rest(Fraction(1, 16)),
-        Note(Fraction(1, 8), (Pitch(4, "A", FLAT),), mezzo_forte, None),
+        Note(Fraction(1, 8), Pitch(4, "A", FLAT), mezzo_forte, None),
         Rest(Fraction(1, 8)),
-        Note(Fraction(1, 16), (Pitch(4, "A", FLAT),), mezzo_forte, None),
+        Note(Fraction(1, 16), Pitch(4, "A", FLAT), mezzo_forte, None),
         Rest(Fraction(3, 16)),
-        Note(Fraction(1, 4), (Pitch(4, "A", FLAT),), mezzo_forte, None),
-        Note(Fraction(7, 16), (Pitch(4, "A", FLAT),), mezzo_forte, None),
+        Note(Fraction(1, 4), Pitch(4, "A", FLAT), mezzo_forte, None),
+        Note(Fraction(7, 16), Pitch(4, "A", FLAT), mezzo_forte, None),
         Rest(Fraction(1, 16)),
     ]
 
@@ -325,7 +328,7 @@ def test_measure():
     assert list(
         measure.play(State(TimeSignature.new(1, 4), 120, mezzo_forte, KEYS["A♭ Major"]))
     ) == [
-        Note(Fraction(1, 8), (Pitch(4, "A", FLAT),), mezzo_forte),
+        Note(Fraction(1, 8), Pitch(4, "A", FLAT), mezzo_forte),
         Rest(Fraction(1, 8)),
     ]
     with pytest.raises(ValueError):
@@ -349,9 +352,9 @@ def test_measure():
             ]
         ).play(State(TimeSignature.new(2, 4), 120, mezzo_forte, KEYS["A♭ Major"]))
     ) == [
-        Note(Fraction(3, 16), (Pitch(4, "A", FLAT),), mezzo_forte, Accent.ACCENT),
+        Note(Fraction(3, 16), Pitch(4, "A", FLAT), mezzo_forte, Accent.ACCENT),
         Rest(Fraction(1, 16)),
-        Note(Fraction(3, 16), (Pitch(4, "A", FLAT),), mezzo_forte, Accent.ACCENT),
+        Note(Fraction(3, 16), Pitch(4, "A", FLAT), mezzo_forte, Accent.ACCENT),
         Rest(Fraction(1, 16)),
     ]
     with pytest.raises(ValueError):
@@ -396,7 +399,7 @@ def test_measure():
 def test_part():
     from blooper.notes import Accent, Dynamic, Note, Rest, Tone
     from blooper.parts import COMMON_TIME, KEYS, WALTZ_TIME, Key, Measure, Part
-    from blooper.pitch import FLAT, NATURAL, SHARP, Pitch
+    from blooper.pitch import FLAT, NATURAL, SHARP, Chord, Pitch
 
     piano = Dynamic.from_symbol("p")
     mezzo_forte = Dynamic.from_symbol("mf")
@@ -463,15 +466,15 @@ def test_part():
 
     # sorry future me if you ever need to change this
     assert tones == [
-        (0, Tone(23_750, (Pitch(4, "A", NATURAL),), forte)),
-        (46_250, Tone(30_000, (Pitch(4, "A", FLAT),), fortissimo, Accent.SLUR)),
-        (76_250, Tone(15_000, (Pitch(4, "A", SHARP),), mezzo_forte)),
-        (91_250, Tone(3_750, (Pitch(4, "A", SHARP),), piano, Accent.ACCENT)),
-        (98_750, Tone(11_250, (Pitch(4, "B", NATURAL),), mezzo_forte, Accent.ACCENT)),
-        (113_750, Tone(15_000, (Pitch(4, "B", SHARP),), mezzo_forte)),
-        (128_750, Tone(30_000, (Pitch(3, "A", NATURAL),), mezzo_forte)),
-        (158_750, Tone(37_500, (Pitch(3, "F", SHARP),), mezzo_forte)),
-        (226_250, Tone(7_500, (Pitch(3, "A", FLAT),), mezzo_forte)),
+        (0, Tone(23_750, Pitch(4, "A", NATURAL), forte)),
+        (46_250, Tone(30_000, Pitch(4, "A", FLAT), fortissimo, Accent.SLUR)),
+        (76_250, Tone(15_000, Pitch(4, "A", SHARP), mezzo_forte)),
+        (91_250, Tone(3_750, Pitch(4, "A", SHARP), piano, Accent.ACCENT)),
+        (98_750, Tone(11_250, Pitch(4, "B", NATURAL), mezzo_forte, Accent.ACCENT)),
+        (113_750, Tone(15_000, Pitch(4, "B", SHARP), mezzo_forte)),
+        (128_750, Tone(30_000, Pitch(3, "A", NATURAL), mezzo_forte)),
+        (158_750, Tone(37_500, Pitch(3, "F", SHARP), mezzo_forte)),
+        (226_250, Tone(7_500, Pitch(3, "A", FLAT), mezzo_forte)),
     ]
 
     # really basic polyphonics test
@@ -485,27 +488,27 @@ def test_part():
                         # 2
                         Note(
                             Fraction(1, 8),
-                            (Pitch(4, "A"), Pitch(4, "B")),
+                            Chord(Pitch(4, "A"), Pitch(4, "B")),
                             accent=Accent.SLUR,
                         ),
                         Note(
                             Fraction(1, 8),
-                            (Pitch(4, "A"), Pitch(4, "B")),
+                            Chord(Pitch(4, "A"), Pitch(4, "B")),
                             accent=Accent.SLUR,
                         ),
                         Note(
                             Fraction(1, 8),
-                            (Pitch(4, "B"), Pitch(4, "A")),
+                            Chord(Pitch(4, "B"), Pitch(4, "A")),
                             accent=Accent.SLUR,
                         ),
                         # 3
                         Note(
                             Fraction(1, 8),
-                            (Pitch(4, "A"), Pitch(4, "B"), Pitch(4, "C")),
+                            Chord(Pitch(4, "A"), Pitch(4, "B"), Pitch(4, "C")),
                             accent=Accent.SLUR,
                         ),
                         # 4
-                        Note(Fraction(1, 4), (Pitch(4, "A"), Pitch(4, "B"))),
+                        Note(Fraction(1, 4), Chord(Pitch(4, "A"), Pitch(4, "B"))),
                     ]
                 ]
             ).tones(30_000)

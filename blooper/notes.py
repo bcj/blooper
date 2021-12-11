@@ -9,9 +9,9 @@ from dataclasses import dataclass
 from enum import Enum
 from fractions import Fraction
 from functools import total_ordering
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
-from blooper.pitch import Pitch
+from blooper.pitch import Chord, Pitch
 
 # This should eventually be rolled in with tempo as part of the mood of
 # the piece. As it is, this is a sort of hacky solution for processing
@@ -160,25 +160,22 @@ class Note:
     """
 
     duration: Fraction  # As a fraction of a whole note
-    pitch: Pitch | tuple[Pitch, ...]
+    pitch: Pitch | Chord
     # As an accent on the specific note. Will not change the dynamic
     # going forward and will be played at the piece's current dynamic.
     dynamic: Optional[Dynamic] = None
     accent: Optional[Accent] = None
 
     @property
-    def pitches(self) -> tuple[Pitch, ...]:
-        if isinstance(self.pitch, Pitch):
-            return (self.pitch,)
-
-        return self.pitch
+    def concurrence(self):
+        return self.pitch.concurrence
 
     def components(
         self,
         beat_size: Fraction,
         *,
         tailoff_factor: Fraction = TAILOFF_FACTOR,
-    ) -> tuple[Fraction, tuple[Pitch, ...], Optional[Dynamic], Optional[Accent]]:
+    ) -> tuple[Fraction, Pitch | Chord, Optional[Dynamic], Optional[Accent]]:
         """
         Get the components of a note, resolving any temporal accents by
         changing the duration.
@@ -210,7 +207,7 @@ class Note:
         if regular_length:
             duration -= min(beat_size, duration) * tailoff_factor
 
-        return duration, self.pitches, self.dynamic, accent
+        return duration, self.pitch, self.dynamic, accent
 
 
 @dataclass(frozen=True)
@@ -220,6 +217,10 @@ class Rest:
     """
 
     duration: Fraction
+
+    @property
+    def concurrence(self):
+        return 0
 
 
 @dataclass(frozen=True)
@@ -234,9 +235,16 @@ class Tone:
     """
 
     duration: int
-    pitches: tuple[Pitch, ...]
+    pitch: Pitch | Chord
     dynamic: Dynamic
     accent: Optional[Accent] = None
+
+    @property
+    def pitches(self) -> Iterable[Pitch]:
+        if isinstance(self.pitch, Pitch):
+            yield self.pitch
+        else:
+            yield from self.pitch.pitches
 
 
 __all__ = ("Accent", "Dynamic", "Note", "Rest", "Tone")

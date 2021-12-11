@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 from fractions import Fraction
 from functools import cache
-from typing import Optional
+from typing import Any, Optional
 
 # just normal music stuff
 SUBSCRIPTS = {
@@ -130,6 +130,10 @@ class Pitch:
     pitch_class: str
     accidental: Optional[Fraction] = None
 
+    @property
+    def concurrence(self):
+        return 1
+
     @classmethod
     def new(
         cls,
@@ -209,6 +213,29 @@ class Pitch:
             symbol = accidental_symbol(self.accidental)
 
         return f"{self.pitch_class}{order}{symbol}"
+
+
+class Chord:
+    """
+    A collection of pitches to play in unison
+    """
+
+    def __init__(self, *pitches: Pitch):
+        self.pitches = set(pitches)
+
+    @property
+    def concurrence(self):
+        return len(self.pitches)
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, Chord):
+            return self.pitches == other.pitches
+        elif isinstance(other, Pitch):
+            return self.pitches == {other}
+
+        return NotImplemented
+
+    # todo: new(cls, *positions: int, key: Key, scale: Scale = CHROMATIC_SCALE)
 
 
 # TODO: It is maybe worth considering how this interacts with Key.
@@ -418,6 +445,7 @@ __all__ = (
     "JUST_BOHLEN_PIERCE",
     "NATURAL",
     "SHARP",
+    "Chord",
     "Pitch",
     "Scale",
     "Tuning",

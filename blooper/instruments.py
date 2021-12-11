@@ -165,13 +165,21 @@ class Synthesizer(Instrument):
 
             old_waves = waves
             waves = []
-            for pitch, old_wave in zip_longest(tone.pitches, old_waves):
-                if pitch is None:
+            for frequency, old_wave in zip_longest(
+                # In theory it shouldn't matter what order we go through frequencies
+                # in a chord but phases won't line up so we'll end up coming up with
+                # different values than if we divide each pitch in a separate part.
+                # Our options here are to respect the order pitches are supplied in
+                # (which feels wrong), or force an order. low-to-high seems reasonable
+                sorted(self.tuning.pitch_to_frequency(pitch) for pitch in tone.pitches),
+                old_waves,
+            ):
+                if frequency is None:
                     break
 
                 waves.append(
                     Waveform(
-                        self.tuning.pitch_to_frequency(pitch),
+                        frequency,
                         sample_rate,
                         wave=self.wave,
                         phase=old_wave.phase if old_wave else None,

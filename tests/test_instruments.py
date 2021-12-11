@@ -73,7 +73,7 @@ def test_synthesizer():
     from blooper.instruments import Synthesizer
     from blooper.notes import Accent, Dynamic, Note, Rest
     from blooper.parts import Part, TimeSignature
-    from blooper.pitch import Pitch, Tuning
+    from blooper.pitch import Chord, Pitch, Tuning
 
     tuning = Tuning(Pitch(0, "A"), 10)
     part = Part(
@@ -335,9 +335,12 @@ def test_synthesizer():
             [
                 [
                     Note(Fraction(1, 4), Pitch(4, "C")),
-                    Note(Fraction(1, 4), (Pitch(4, "C"), Pitch(4, "E"))),
-                    Note(Fraction(1, 4), (Pitch(4, "C"), Pitch(4, "E"), Pitch(4, "F"))),
-                    Note(Fraction(1, 4), (Pitch(4, "C"), Pitch(4, "G"))),
+                    Note(Fraction(1, 4), Chord(Pitch(4, "C"), Pitch(4, "E"))),
+                    Note(
+                        Fraction(1, 4),
+                        Chord(Pitch(4, "C"), Pitch(4, "E"), Pitch(4, "F")),
+                    ),
+                    Note(Fraction(1, 4), Chord(Pitch(4, "C"), Pitch(4, "G"))),
                 ]
             ]
         ),
@@ -392,7 +395,7 @@ def test_sampler():
     from blooper.filetypes import UsageMetadata
     from blooper.instruments import Sampler
     from blooper.notes import Dynamic, Tone
-    from blooper.pitch import Pitch, Tuning
+    from blooper.pitch import Chord, Pitch, Tuning
     from blooper.wavs import WavSample, record
 
     # helpers
@@ -601,10 +604,10 @@ def test_sampler():
         sampler = Sampler(paths, tuning=tuning, envelope=envelope, loop=False)
         part = FakePart(
             [
-                (3, Tone(3, (Pitch(3, "A"),), Dynamic.from_name("forte"))),
-                (7, Tone(3, (Pitch(4, "A"),), Dynamic.from_name("forte"))),
-                (11, Tone(3, (Pitch(5, "A"),), Dynamic.from_name("forte"))),
-                (14, Tone(3, (Pitch(4, "A"),), Dynamic.from_name("forte"))),
+                (3, Tone(3, Pitch(3, "A"), Dynamic.from_name("forte"))),
+                (7, Tone(3, Pitch(4, "A"), Dynamic.from_name("forte"))),
+                (11, Tone(3, Pitch(5, "A"), Dynamic.from_name("forte"))),
+                (14, Tone(3, Pitch(4, "A"), Dynamic.from_name("forte"))),
             ]
         )
 
@@ -721,10 +724,13 @@ def test_sampler():
             [
                 [
                     Note(Fraction(1, 4), Pitch(4, "A")),
-                    Note(Fraction(1, 4), (Pitch(4, "A"), Pitch(3, "A"))),
+                    Note(Fraction(1, 4), Chord(Pitch(4, "A"), Pitch(3, "A"))),
                     # Should be treated as separate even though A2 isn't available
-                    Note(Fraction(1, 4), (Pitch(4, "A"), Pitch(3, "A"), Pitch(2, "A"))),
-                    Note(Fraction(1, 4), (Pitch(4, "A"), Pitch(3, "A"))),
+                    Note(
+                        Fraction(1, 4),
+                        Chord(Pitch(4, "A"), Pitch(3, "A"), Pitch(2, "A")),
+                    ),
+                    Note(Fraction(1, 4), Chord(Pitch(4, "A"), Pitch(3, "A"))),
                 ]
             ]
         ),

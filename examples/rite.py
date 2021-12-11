@@ -6,6 +6,7 @@ from blooper import (
     FLAT,
     SHARP,
     Accent,
+    Chord,
     Measure,
     Mixer,
     Note,
@@ -221,40 +222,43 @@ piano_harmony_right = Part(
         ),
         Measure(
             [
-                Note(Fraction(3, 8), (Pitch(3, "A", FLAT), Pitch(4, "D", FLAT))),
+                Note(Fraction(3, 8), Chord(Pitch(3, "A", FLAT), Pitch(4, "D", FLAT))),
                 Note(
-                    Fraction(1, 8), (Pitch(3, "G"), Pitch(4, "C")), accent=Accent.SLUR
+                    Fraction(1, 8),
+                    Chord(Pitch(3, "G"), Pitch(4, "C")),
+                    accent=Accent.SLUR,
                 ),
             ],
             time=TimeSignature.new(2, 4),
         ),
         Measure(
             [
-                Note(Fraction(1, 12), (Pitch(3, "G"), Pitch(4, "C"))),
-                Note(Fraction(1, 6), (Pitch(3, "G", FLAT), Pitch(3, "B"))),
+                Note(Fraction(1, 12), Chord(Pitch(3, "G"), Pitch(4, "C"))),
+                Note(Fraction(1, 6), Chord(Pitch(3, "G", FLAT), Pitch(3, "B"))),
                 Note(
                     Fraction(1, 4),
-                    (Pitch(3, "F"), Pitch(3, "B", FLAT)),
+                    Chord(Pitch(3, "F"), Pitch(3, "B", FLAT)),
                     accent=Accent.SLUR,
                 ),
-                Note(Fraction(1, 12), (Pitch(3, "F"), Pitch(3, "B", FLAT))),
+                Note(Fraction(1, 12), Chord(Pitch(3, "F"), Pitch(3, "B", FLAT))),
                 Note(
-                    Fraction(1, 12), (Pitch(3, "F", FLAT), Pitch(3, "B", DOUBLE_FLAT))
+                    Fraction(1, 12),
+                    Chord(Pitch(3, "F", FLAT), Pitch(3, "B", DOUBLE_FLAT)),
                 ),
-                Note(Fraction(1, 12), (Pitch(3, "E", FLAT), Pitch(3, "A", FLAT))),
+                Note(Fraction(1, 12), Chord(Pitch(3, "E", FLAT), Pitch(3, "A", FLAT))),
             ],
             time=TimeSignature.new(3, 4),
         ),
         [
-            Note(Fraction(1, 12), (Pitch(3, "D"), Pitch(3, "G"))),
-            Note(Fraction(1, 12), (Pitch(3, "C", SHARP), Pitch(3, "F", SHARP))),
-            Note(Fraction(1, 12), (Pitch(3, "C"), Pitch(3, "F"))),
-            Note(Fraction(1, 12), (Pitch(2, "B"), Pitch(3, "E"))),
-            Note(Fraction(1, 12), (Pitch(2, "B", FLAT), Pitch(3, "E", FLAT))),
-            Note(Fraction(1, 12), (Pitch(2, "A"), Pitch(3, "D"))),
+            Note(Fraction(1, 12), Chord(Pitch(3, "D"), Pitch(3, "G"))),
+            Note(Fraction(1, 12), Chord(Pitch(3, "C", SHARP), Pitch(3, "F", SHARP))),
+            Note(Fraction(1, 12), Chord(Pitch(3, "C"), Pitch(3, "F"))),
+            Note(Fraction(1, 12), Chord(Pitch(2, "B"), Pitch(3, "E"))),
+            Note(Fraction(1, 12), Chord(Pitch(2, "B", FLAT), Pitch(3, "E", FLAT))),
+            Note(Fraction(1, 12), Chord(Pitch(2, "A"), Pitch(3, "D"))),
             Note(
                 Fraction(1, 4),
-                (Pitch(2, "G", SHARP), Pitch(3, "C", SHARP)),
+                Chord(Pitch(2, "G", SHARP), Pitch(3, "C", SHARP)),
                 accent=Accent.SLUR,
             ),
         ],
@@ -262,7 +266,7 @@ piano_harmony_right = Part(
             [
                 Note(
                     Fraction(1, 2),
-                    (Pitch(2, "G", SHARP), Pitch(3, "C", SHARP)),
+                    Chord(Pitch(2, "G", SHARP), Pitch(3, "C", SHARP)),
                     accent=Accent.SLUR,
                 )
             ],
@@ -272,18 +276,20 @@ piano_harmony_right = Part(
             [
                 Note(
                     Fraction(1, 4),
-                    (Pitch(2, "G", SHARP), Pitch(3, "C", SHARP)),
+                    Chord(Pitch(2, "G", SHARP), Pitch(3, "C", SHARP)),
                     accent=Accent.SLUR,
                 ),
-                Note(Fraction(1, 12), (Pitch(2, "G", SHARP), Pitch(3, "C", SHARP))),
-                Note(Fraction(1, 12), (Pitch(2, "A"), Pitch(3, "D"))),
+                Note(
+                    Fraction(1, 12), Chord(Pitch(2, "G", SHARP), Pitch(3, "C", SHARP))
+                ),
+                Note(Fraction(1, 12), Chord(Pitch(2, "A"), Pitch(3, "D"))),
                 Note(
                     Fraction(1, 12),
-                    (Pitch(2, "A", SHARP), Pitch(3, "D", SHARP)),
+                    Chord(Pitch(2, "A", SHARP), Pitch(3, "D", SHARP)),
                     accent=Accent.SLUR,
                 ),
-                Note(Fraction(1, 8), (Pitch(2, "A", SHARP), Pitch(3, "D", SHARP))),
-                Note(Fraction(1, 8), (Pitch(2, "A"), Pitch(3, "D"))),
+                Note(Fraction(1, 8), Chord(Pitch(2, "A", SHARP), Pitch(3, "D", SHARP))),
+                Note(Fraction(1, 8), Chord(Pitch(2, "A"), Pitch(3, "D"))),
             ],
             time=TimeSignature.new(3, 4),
         ),
@@ -335,7 +341,7 @@ piano_harmony_left = Part(
             [
                 Note(
                     Fraction(1, 2),
-                    (Pitch(2, "G", SHARP), Pitch(3, "C", SHARP)),
+                    Chord(Pitch(2, "G", SHARP), Pitch(3, "C", SHARP)),
                     accent=Accent.SLUR,
                 )
             ],
@@ -344,18 +350,18 @@ piano_harmony_left = Part(
         [
             Note(
                 Fraction(1, 2),
-                (Pitch(2, "G", SHARP), Pitch(3, "C", SHARP)),
+                Chord(Pitch(2, "G", SHARP), Pitch(3, "C", SHARP)),
                 accent=Accent.SLUR,
             )
         ],
         [
             Note(
                 Fraction(1, 2),
-                (Pitch(2, "G", SHARP), Pitch(3, "C", SHARP)),
+                Chord(Pitch(2, "G", SHARP), Pitch(3, "C", SHARP)),
                 accent=Accent.SLUR,
             )
         ],
-        [Note(Fraction(1, 2), (Pitch(2, "G", SHARP), Pitch(3, "C", SHARP)))],
+        [Note(Fraction(1, 2), Chord(Pitch(2, "G", SHARP), Pitch(3, "C", SHARP)))],
     ],
     tempo=Tempo.LENTO,
 )
