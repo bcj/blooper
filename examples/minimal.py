@@ -7,29 +7,29 @@ instrument = Synthesizer()
 part = Part(
     [
         [
-            Note(Fraction(1, 4), Pitch(4, "B")),
-            Note(Fraction(1, 4), Pitch(4, "A")),
-            Note(Fraction(1, 2), Pitch(4, "G")),
+            Note.new(Fraction(1, 4), Pitch(4, "B")),
+            Note.new(Fraction(1, 4), Pitch(4, "A")),
+            Note.new(Fraction(1, 2), Pitch(4, "G")),
         ],
         [
-            Note(Fraction(1, 4), Pitch(4, "B")),
-            Note(Fraction(1, 4), Pitch(4, "A")),
-            Note(Fraction(1, 2), Pitch(4, "G")),
+            Note.new(Fraction(1, 4), Pitch(4, "B")),
+            Note.new(Fraction(1, 4), Pitch(4, "A")),
+            Note.new(Fraction(1, 2), Pitch(4, "G")),
         ],
         [
-            Note(Fraction(1, 8), Pitch(4, "G")),
-            Note(Fraction(1, 8), Pitch(4, "G")),
-            Note(Fraction(1, 8), Pitch(4, "G")),
-            Note(Fraction(1, 8), Pitch(4, "G")),
-            Note(Fraction(1, 8), Pitch(4, "A")),
-            Note(Fraction(1, 8), Pitch(4, "A")),
-            Note(Fraction(1, 8), Pitch(4, "A")),
-            Note(Fraction(1, 8), Pitch(4, "A")),
+            Note.new(Fraction(1, 8), Pitch(4, "G")),
+            Note.new(Fraction(1, 8), Pitch(4, "G")),
+            Note.new(Fraction(1, 8), Pitch(4, "G")),
+            Note.new(Fraction(1, 8), Pitch(4, "G")),
+            Note.new(Fraction(1, 8), Pitch(4, "A")),
+            Note.new(Fraction(1, 8), Pitch(4, "A")),
+            Note.new(Fraction(1, 8), Pitch(4, "A")),
+            Note.new(Fraction(1, 8), Pitch(4, "A")),
         ],
         [
-            Note(Fraction(1, 4), Pitch(4, "B")),
-            Note(Fraction(1, 4), Pitch(4, "A")),
-            Note(Fraction(1, 2), Pitch(4, "G")),
+            Note.new(Fraction(1, 4), Pitch(4, "B")),
+            Note.new(Fraction(1, 4), Pitch(4, "A")),
+            Note.new(Fraction(1, 2), Pitch(4, "G")),
         ],
     ]
 )

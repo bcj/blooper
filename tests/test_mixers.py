@@ -13,13 +13,13 @@ def test_mixer():
 
     tuning = Tuning(Pitch(0, "A"), 10)
     part = Part(
-        [[Note(Fraction(1, 1), Pitch(4, "A"))]],
+        [[Note.new(Fraction(1, 1), Pitch(4, "A"))]],
         time=TimeSignature(4, 4),
         tempo=Tempo.ALLEGRO_MODERATO,
         dynamic=Dynamic.from_name("fortissimo"),
     )
     part2 = Part(
-        [[Note(Fraction(1, 2), Pitch(4, "A")), Rest(Fraction(1, 2))]],
+        [[Note.new(Fraction(1, 2), Pitch(4, "A")), Rest(Fraction(1, 2))]],
         time=TimeSignature(4, 4),
         tempo=Tempo.GRAVE,
         dynamic=Dynamic.from_name("piano"),

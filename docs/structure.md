@@ -61,24 +61,30 @@ If you do not need to specify any kind of change in a measure, you can supply me
 
 #### Notes & Rests
 
-A `Note` (found in `blooper.notes`) contains four components: a duration (as a fractional number of beats), a [pitch](#pitch) (or a [chord](#chord)), an optional [dynamic](#dynamic) (if not supplied, the part's current dynamic is used), and an optional [accent](#accents).
+A `Note` (found in `blooper.notes`) contains a duration (as a fractional number of beats) and a [tone](#tone).
+
+You can skip creating a tone using the `Note.new` class method.
 
 A `Rest` (also found in `blooper.notes`) only contains a duration.
 
-##### Pitch
+##### Tone
 
-A `Pitch` (found in `blooper.pitch`) contains four component: an order (you can read that as 'octave' for any common usage), a pitch class (i.e., the letters you refer to notes by), and an optional accidental (the fraction of a tone to offset the note by).
+A `Tone` (found in `blooper.notes`) consists of three components: a [pitch](#pitch) (or a [chord](#chord)), an optional [dynamic](#dynamic) (if not supplied, the part's current dynamic is used), and an optional [accent](#accents).
+
+###### Pitch
+
+A `Pitch` (found in `blooper.pitch`) contains three components: an order (you can read that as 'octave' for any common usage), a pitch class (i.e., the letters you refer to notes by), and an optional accidental (the fraction of a tone to offset the note by).
 
 If an accidental isn't provided, the note will be interpreted by the [key](#key) the part is currently in.
 You should use the constants `FLAT`/`NATURAL`/`SHARP` instead of rewriting fractions.
 
 See [scales](#scales) if you're curious about some of the unusual wording choices when describing pitches.
 
-##### Chord
+###### Chord
 
 A `Chord` (found in `blooper.pitch`) is a set of [pitches](#pitch) that are played in unison.
 
-##### Accents
+###### Accents
 
 An `Accent` (found in `blooper.notes`) is a note modifier that affects how the instrument is supposed to approach playing a note.
 

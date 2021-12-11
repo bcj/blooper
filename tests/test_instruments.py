@@ -79,9 +79,9 @@ def test_synthesizer():
     part = Part(
         [
             [
-                Note(Fraction(1, 2), Pitch(0, "A"), accent=Accent.TENUTO),
+                Note.new(Fraction(1, 2), Pitch(0, "A"), accent=Accent.TENUTO),
                 Rest(Fraction(1, 4)),
-                Note(Fraction(1, 4), Pitch(-1, "A"), accent=Accent.TENUTO),
+                Note.new(Fraction(1, 4), Pitch(-1, "A"), accent=Accent.TENUTO),
             ],
         ],
         dynamic=Dynamic.from_name("fortissimo"),
@@ -277,7 +277,7 @@ def test_synthesizer():
         [
             [
                 Rest(Fraction(1, 4)),
-                Note(Fraction(1, 4), Pitch(-1, "A"), accent=Accent.TENUTO),
+                Note.new(Fraction(1, 4), Pitch(-1, "A"), accent=Accent.TENUTO),
             ],
         ],
         time=TimeSignature.new(2, 4),
@@ -334,13 +334,13 @@ def test_synthesizer():
         Part(
             [
                 [
-                    Note(Fraction(1, 4), Pitch(4, "C")),
-                    Note(Fraction(1, 4), Chord(Pitch(4, "C"), Pitch(4, "E"))),
-                    Note(
+                    Note.new(Fraction(1, 4), Pitch(4, "C")),
+                    Note.new(Fraction(1, 4), Chord(Pitch(4, "C"), Pitch(4, "E"))),
+                    Note.new(
                         Fraction(1, 4),
                         Chord(Pitch(4, "C"), Pitch(4, "E"), Pitch(4, "F")),
                     ),
-                    Note(Fraction(1, 4), Chord(Pitch(4, "C"), Pitch(4, "G"))),
+                    Note.new(Fraction(1, 4), Chord(Pitch(4, "C"), Pitch(4, "G"))),
                 ]
             ]
         ),
@@ -352,10 +352,10 @@ def test_synthesizer():
             Part(
                 [
                     [
-                        Note(Fraction(1, 4), Pitch(4, "C")),
-                        Note(Fraction(1, 4), Pitch(4, "C")),
-                        Note(Fraction(1, 4), Pitch(4, "C")),
-                        Note(Fraction(1, 4), Pitch(4, "C")),
+                        Note.new(Fraction(1, 4), Pitch(4, "C")),
+                        Note.new(Fraction(1, 4), Pitch(4, "C")),
+                        Note.new(Fraction(1, 4), Pitch(4, "C")),
+                        Note.new(Fraction(1, 4), Pitch(4, "C")),
                     ]
                 ]
             ),
@@ -366,9 +366,9 @@ def test_synthesizer():
                 [
                     [
                         Rest(Fraction(1, 4)),
-                        Note(Fraction(1, 4), Pitch(4, "E")),
-                        Note(Fraction(1, 4), Pitch(4, "E")),
-                        Note(Fraction(1, 4), Pitch(4, "G")),
+                        Note.new(Fraction(1, 4), Pitch(4, "E")),
+                        Note.new(Fraction(1, 4), Pitch(4, "E")),
+                        Note.new(Fraction(1, 4), Pitch(4, "G")),
                     ]
                 ]
             ),
@@ -379,7 +379,7 @@ def test_synthesizer():
                 [
                     [
                         Rest(Fraction(1, 2)),
-                        Note(Fraction(1, 4), Pitch(4, "F")),
+                        Note.new(Fraction(1, 4), Pitch(4, "F")),
                         Rest(Fraction(1, 4)),
                     ]
                 ]
@@ -604,10 +604,10 @@ def test_sampler():
         sampler = Sampler(paths, tuning=tuning, envelope=envelope, loop=False)
         part = FakePart(
             [
-                (3, Tone(3, Pitch(3, "A"), Dynamic.from_name("forte"))),
-                (7, Tone(3, Pitch(4, "A"), Dynamic.from_name("forte"))),
-                (11, Tone(3, Pitch(5, "A"), Dynamic.from_name("forte"))),
-                (14, Tone(3, Pitch(4, "A"), Dynamic.from_name("forte"))),
+                (3, 3, Tone(Pitch(3, "A"), Dynamic.from_name("forte"))),
+                (7, 3, Tone(Pitch(4, "A"), Dynamic.from_name("forte"))),
+                (11, 3, Tone(Pitch(5, "A"), Dynamic.from_name("forte"))),
+                (14, 3, Tone(Pitch(4, "A"), Dynamic.from_name("forte"))),
             ]
         )
 
@@ -723,14 +723,14 @@ def test_sampler():
         Part(
             [
                 [
-                    Note(Fraction(1, 4), Pitch(4, "A")),
-                    Note(Fraction(1, 4), Chord(Pitch(4, "A"), Pitch(3, "A"))),
+                    Note.new(Fraction(1, 4), Pitch(4, "A")),
+                    Note.new(Fraction(1, 4), Chord(Pitch(4, "A"), Pitch(3, "A"))),
                     # Should be treated as separate even though A2 isn't available
-                    Note(
+                    Note.new(
                         Fraction(1, 4),
                         Chord(Pitch(4, "A"), Pitch(3, "A"), Pitch(2, "A")),
                     ),
-                    Note(Fraction(1, 4), Chord(Pitch(4, "A"), Pitch(3, "A"))),
+                    Note.new(Fraction(1, 4), Chord(Pitch(4, "A"), Pitch(3, "A"))),
                 ]
             ]
         ),
@@ -742,10 +742,10 @@ def test_sampler():
             Part(
                 [
                     [
-                        Note(Fraction(1, 4), Pitch(4, "A")),
-                        Note(Fraction(1, 4), Pitch(4, "A")),
-                        Note(Fraction(1, 4), Pitch(4, "A")),
-                        Note(Fraction(1, 4), Pitch(4, "A")),
+                        Note.new(Fraction(1, 4), Pitch(4, "A")),
+                        Note.new(Fraction(1, 4), Pitch(4, "A")),
+                        Note.new(Fraction(1, 4), Pitch(4, "A")),
+                        Note.new(Fraction(1, 4), Pitch(4, "A")),
                     ]
                 ]
             ),
@@ -756,9 +756,9 @@ def test_sampler():
                 [
                     [
                         Rest(Fraction(1, 4)),
-                        Note(Fraction(1, 4), Pitch(3, "A")),
-                        Note(Fraction(1, 4), Pitch(3, "A")),
-                        Note(Fraction(1, 4), Pitch(3, "A")),
+                        Note.new(Fraction(1, 4), Pitch(3, "A")),
+                        Note.new(Fraction(1, 4), Pitch(3, "A")),
+                        Note.new(Fraction(1, 4), Pitch(3, "A")),
                     ]
                 ]
             ),
@@ -769,7 +769,7 @@ def test_sampler():
                 [
                     [
                         Rest(Fraction(1, 2)),
-                        Note(Fraction(1, 4), Pitch(2, "A")),
+                        Note.new(Fraction(1, 4), Pitch(2, "A")),
                         Rest(Fraction(1, 4)),
                     ]
                 ]

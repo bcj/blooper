@@ -5,7 +5,7 @@ Conversions from Dynamics to absolute volumes
 from abc import ABC, abstractmethod
 from fractions import Fraction
 from functools import cache
-from typing import Any, Generator, Optional
+from typing import Any, Generator, Optional, cast
 
 from blooper.notes import Accent, Dynamic, Tone
 
@@ -133,7 +133,7 @@ class Envelope(ABC):
 
     @abstractmethod
     def volumes(
-        self, tone: Tone, sample_rate: int, start: float = 0
+        self, tone: Tone, duration: int, sample_rate: int, start: float = 0
     ) -> Generator[float, None, None]:
         """
         Determine the amplitudes of each sample. Generator may produce
@@ -144,7 +144,7 @@ class Envelope(ABC):
         the duration).
 
         tone: The tone to produce amplitudes for. It is expected that
-            the volumizer will handle any accents that effect volume
+            the envelope will handle any accents that effect volume
         sample_rate: How many samples are being produced a second.
         start: The starting amplitude (may be > 0 if the previous tone
             didn't finish before the current tone is set to start)
@@ -168,10 +168,10 @@ class Homogeneous(Envelope):
         return self._dynamics
 
     def volumes(
-        self, tone: Tone, sample_rate: int, start: float = 0
+        self, tone: Tone, duration: int, sample_rate: int, start: float = 0
     ) -> Generator[float, None, None]:
         volume = self.dynamics.volume(tone.dynamic)
-        for _ in range(tone.duration):
+        for _ in range(duration):
             yield volume
 
 
@@ -280,15 +280,16 @@ class AttackDecaySustainRelease(Envelope):
         return self._dynamics
 
     def volumes(
-        self, tone: Tone, sample_rate: int, start: float = 0
+        self, tone: Tone, duration: int, sample_rate: int, start: float = 0
     ) -> Generator[float, None, None]:
 
+        # safe to cast tone.dynamic. We know parts always supply dynamics
         peak, sustain, end, attack_rate, decay_rate, release_rate = self._rates(
-            tone, sample_rate
+            cast(Dynamic, tone.dynamic), tone.accent, sample_rate
         )
 
         yield from self._volumes(
-            tone.duration,
+            duration,
             start,
             peak,
             sustain,
@@ -299,14 +300,14 @@ class AttackDecaySustainRelease(Envelope):
         )
 
     def _rates(
-        self, tone: Tone, sample_rate: int
+        self, dynamic: Dynamic, accent: Optional[Accent], sample_rate: int
     ) -> tuple[float, float, float, float, float, float]:
         """
         Work out the rates max/min possible volumes for a tone. Split out
         just to make testing easier (esp. because the rest of volumes is a
         little bit of a nightmare)
         """
-        peak = self.dynamics.volume(tone.dynamic)
+        peak = self.dynamics.volume(dynamic)
         attack = self.attack * sample_rate
         decay = self.decay * sample_rate
         release = self.release * sample_rate
@@ -314,16 +315,14 @@ class AttackDecaySustainRelease(Envelope):
         sustain = self.sustain_level * peak
         end = 0.0
 
-        if tone.accent == Accent.ACCENT:
+        if accent == Accent.ACCENT:
             peak = self.dynamics.volume(
-                Dynamic(
-                    tone.dynamic.value + round(tone.dynamic.step * self.accent_peak)
-                )
+                Dynamic(dynamic.value + round(dynamic.step * self.accent_peak))
             )
             attack /= self.accent_multiplier
             decay /= self.accent_multiplier
             release /= self.accent_multiplier
-        elif tone.accent == Accent.SLUR:
+        elif accent == Accent.SLUR:
             end = sustain
 
         return peak, sustain, end, 1 / attack, 1 / decay, 1 / release
@@ -331,7 +330,7 @@ class AttackDecaySustainRelease(Envelope):
     @classmethod
     def _volumes(
         cls,
-        duration: float,
+        duration: int,
         start: float,
         peak: float,
         sustain: float,
@@ -354,7 +353,7 @@ class AttackDecaySustainRelease(Envelope):
         # As such, the priority for the 4 stages is:
         # release > attack > decay > sustain
 
-        remaining = duration
+        remaining: float = duration
 
         volume = start
         if volume > end:

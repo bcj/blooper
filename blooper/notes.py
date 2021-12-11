@@ -154,21 +154,35 @@ class Dynamic:
 
 
 @dataclass(frozen=True)
+class Tone:
+    """
+    A pitch + the properties of how that pitch should be played.
+    """
+
+    pitch: Pitch | Chord
+    dynamic: Optional[Dynamic] = None
+    accent: Optional[Accent] = None
+
+    @property
+    def pitches(self) -> Iterable[Pitch]:
+        if isinstance(self.pitch, Pitch):
+            yield self.pitch
+        else:
+            yield from self.pitch.pitches
+
+
+@dataclass(frozen=True)
 class Note:
     """
     A musical note (as they are represented in western musical notation)
     """
 
     duration: Fraction  # As a fraction of a whole note
-    pitch: Pitch | Chord
-    # As an accent on the specific note. Will not change the dynamic
-    # going forward and will be played at the piece's current dynamic.
-    dynamic: Optional[Dynamic] = None
-    accent: Optional[Accent] = None
+    tone: Tone
 
     @property
     def concurrence(self):
-        return self.pitch.concurrence
+        return self.tone.pitch.concurrence
 
     def components(
         self,
@@ -181,7 +195,7 @@ class Note:
         changing the duration.
         """
         duration = self.duration
-        accent = self.accent
+        accent = self.tone.accent
 
         regular_length = True
 
@@ -207,7 +221,17 @@ class Note:
         if regular_length:
             duration -= min(beat_size, duration) * tailoff_factor
 
-        return duration, self.pitch, self.dynamic, accent
+        return duration, self.tone.pitch, self.tone.dynamic, accent
+
+    @classmethod
+    def new(
+        cls,
+        duration,
+        pitch: Pitch | Chord,
+        dynamic: Optional[Dynamic] = None,
+        accent: Optional[Accent] = None,
+    ) -> Note:
+        return Note(duration, Tone(pitch, dynamic=dynamic, accent=accent))
 
 
 @dataclass(frozen=True)
@@ -221,30 +245,6 @@ class Rest:
     @property
     def concurrence(self):
         return 0
-
-
-@dataclass(frozen=True)
-class Tone:
-    """
-    A version of a Note with its duration defined in terms of samples
-    not the fraction of a measure.
-
-    NOTE: Unlike with Notes, dynamic is required. With Note it's
-    considered optional because the part may specify its own dynamic.
-    It is assumed that Tones aren't being used for composition.
-    """
-
-    duration: int
-    pitch: Pitch | Chord
-    dynamic: Dynamic
-    accent: Optional[Accent] = None
-
-    @property
-    def pitches(self) -> Iterable[Pitch]:
-        if isinstance(self.pitch, Pitch):
-            yield self.pitch
-        else:
-            yield from self.pitch.pitches
 
 
 __all__ = ("Accent", "Dynamic", "Note", "Rest", "Tone")

@@ -150,88 +150,104 @@ def test_note():
     # no accent and Accent.Accent means 3/4 length (kind of)
     for accent in (None, Accent.ACCENT):
         for dynamic in (None, Dynamic.from_symbol("f")):
-            assert Note(half_note, pitch, dynamic, accent=accent).components(
+            assert Note.new(half_note, pitch, dynamic, accent=accent).components(
                 quarter_note
             ) == (Fraction(7, 16), pitch, dynamic, accent)
-            assert Note(quarter_note, pitch, dynamic, accent=accent).components(
+            assert Note.new(quarter_note, pitch, dynamic, accent=accent).components(
                 quarter_note
             ) == (Fraction(3, 16), pitch, dynamic, accent)
-            assert Note(eighth_note, pitch, dynamic, accent=accent).components(
+            assert Note.new(eighth_note, pitch, dynamic, accent=accent).components(
                 quarter_note
             ) == (Fraction(3, 32), pitch, dynamic, accent)
 
     # MARCATO is STACCATO + ACCENT
-    assert Note(half_note, pitch, accent=Accent.MARCATO).components(quarter_note) == (
+    assert Note.new(half_note, pitch, accent=Accent.MARCATO).components(
+        quarter_note
+    ) == (
         Fraction(1, 4),
         pitch,
         None,
         Accent.ACCENT,
     )
-    assert Note(quarter_note, pitch, accent=Accent.MARCATO).components(
+    assert Note.new(quarter_note, pitch, accent=Accent.MARCATO).components(
         quarter_note
     ) == (Fraction(1, 8), pitch, None, Accent.ACCENT)
-    assert Note(eighth_note, pitch, accent=Accent.MARCATO).components(quarter_note) == (
+    assert Note.new(eighth_note, pitch, accent=Accent.MARCATO).components(
+        quarter_note
+    ) == (
         Fraction(1, 16),
         pitch,
         None,
         Accent.ACCENT,
     )
 
-    assert Note(half_note, pitch, accent=Accent.STACCATO).components(quarter_note) == (
+    assert Note.new(half_note, pitch, accent=Accent.STACCATO).components(
+        quarter_note
+    ) == (
         Fraction(1, 4),
         pitch,
         None,
         None,
     )
-    assert Note(quarter_note, pitch, accent=Accent.STACCATO).components(
+    assert Note.new(quarter_note, pitch, accent=Accent.STACCATO).components(
         quarter_note
     ) == (Fraction(1, 8), pitch, None, None)
-    assert Note(eighth_note, pitch, accent=Accent.STACCATO).components(
+    assert Note.new(eighth_note, pitch, accent=Accent.STACCATO).components(
         quarter_note
     ) == (Fraction(1, 16), pitch, None, None)
 
-    assert Note(half_note, pitch, accent=Accent.STACCATISSIMO).components(
+    assert Note.new(half_note, pitch, accent=Accent.STACCATISSIMO).components(
         quarter_note
     ) == (Fraction(1, 8), pitch, None, None)
-    assert Note(quarter_note, pitch, accent=Accent.STACCATISSIMO).components(
+    assert Note.new(quarter_note, pitch, accent=Accent.STACCATISSIMO).components(
         quarter_note
     ) == (Fraction(1, 16), pitch, None, None)
-    assert Note(eighth_note, pitch, accent=Accent.STACCATISSIMO).components(
+    assert Note.new(eighth_note, pitch, accent=Accent.STACCATISSIMO).components(
         quarter_note
     ) == (Fraction(1, 32), pitch, None, None)
 
-    assert Note(half_note, pitch, accent=Accent.TENUTO).components(quarter_note) == (
+    assert Note.new(half_note, pitch, accent=Accent.TENUTO).components(
+        quarter_note
+    ) == (
         half_note,
         pitch,
         None,
         None,
     )
-    assert Note(quarter_note, pitch, accent=Accent.TENUTO).components(quarter_note) == (
+    assert Note.new(quarter_note, pitch, accent=Accent.TENUTO).components(
+        quarter_note
+    ) == (
         quarter_note,
         pitch,
         None,
         None,
     )
-    assert Note(eighth_note, pitch, accent=Accent.TENUTO).components(quarter_note) == (
+    assert Note.new(eighth_note, pitch, accent=Accent.TENUTO).components(
+        quarter_note
+    ) == (
         eighth_note,
         pitch,
         None,
         None,
     )
 
-    assert Note(half_note, pitch, accent=Accent.SLUR).components(quarter_note) == (
+    assert Note.new(half_note, pitch, accent=Accent.SLUR).components(quarter_note) == (
         half_note,
         pitch,
         None,
         Accent.SLUR,
     )
-    assert Note(quarter_note, pitch, accent=Accent.SLUR).components(quarter_note) == (
+    assert Note.new(quarter_note, pitch, accent=Accent.SLUR).components(
+        quarter_note
+    ) == (
         quarter_note,
         pitch,
         None,
         Accent.SLUR,
     )
-    assert Note(eighth_note, pitch, accent=Accent.SLUR).components(quarter_note) == (
+    assert Note.new(eighth_note, pitch, accent=Accent.SLUR).components(
+        quarter_note
+    ) == (
         eighth_note,
         pitch,
         None,
@@ -239,38 +255,44 @@ def test_note():
     )
 
     # different beat size
-    assert Note(half_note, pitch).components(eighth_note) == (
+    assert Note.new(half_note, pitch).components(eighth_note) == (
         Fraction(15, 32),
         pitch,
         None,
         None,
     )
-    assert Note(quarter_note, pitch).components(eighth_note) == (
+    assert Note.new(quarter_note, pitch).components(eighth_note) == (
         Fraction(7, 32),
         pitch,
         None,
         None,
     )
-    assert Note(eighth_note, pitch).components(eighth_note) == (
+    assert Note.new(eighth_note, pitch).components(eighth_note) == (
         Fraction(3, 32),
         pitch,
         None,
         None,
     )
 
-    assert Note(half_note, pitch, accent=Accent.MARCATO).components(eighth_note) == (
+    assert Note.new(half_note, pitch, accent=Accent.MARCATO).components(
+        eighth_note
+    ) == (
         Fraction(1, 4),
         pitch,
         None,
         Accent.ACCENT,
     )
-    assert Note(quarter_note, pitch, accent=Accent.MARCATO).components(eighth_note) == (
+    assert Note.new(quarter_note, pitch, accent=Accent.MARCATO).components(
+        eighth_note
+    ) == (
         Fraction(1, 8),
         pitch,
         None,
         Accent.ACCENT,
     )
-    assert Note(eighth_note, pitch, accent=Accent.MARCATO).components(eighth_note) == (
+    assert Note.new(eighth_note, pitch, accent=Accent.MARCATO).components(
+        eighth_note
+    ) == (
         Fraction(1, 16),
         pitch,
         None,
@@ -278,23 +300,23 @@ def test_note():
     )
 
     # different drop-off
-    assert Note(half_note, pitch).components(
+    assert Note.new(half_note, pitch).components(
         quarter_note, tailoff_factor=Fraction(3, 16)
     ) == (Fraction(29, 64), pitch, None, None)
-    assert Note(quarter_note, pitch).components(
+    assert Note.new(quarter_note, pitch).components(
         quarter_note, tailoff_factor=Fraction(3, 16)
     ) == (Fraction(13, 64), pitch, None, None)
-    assert Note(eighth_note, pitch).components(
+    assert Note.new(eighth_note, pitch).components(
         quarter_note, tailoff_factor=Fraction(3, 16)
     ) == (Fraction(13, 128), pitch, None, None)
 
     # 0 drop-off
-    assert Note(half_note, pitch).components(
+    assert Note.new(half_note, pitch).components(
         quarter_note, tailoff_factor=Fraction(0, 1)
     ) == (half_note, pitch, None, None)
-    assert Note(quarter_note, pitch).components(
+    assert Note.new(quarter_note, pitch).components(
         quarter_note, tailoff_factor=Fraction(0, 1)
     ) == (quarter_note, pitch, None, None)
-    assert Note(eighth_note, pitch).components(
+    assert Note.new(eighth_note, pitch).components(
         quarter_note, tailoff_factor=Fraction(0, 1)
     ) == (eighth_note, pitch, None, None)

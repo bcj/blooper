@@ -266,17 +266,20 @@ class Measure:
                     )
 
             if isinstance(note, Note):
-                if note.accent:
-                    if state.time.beat_size < note.duration and not note.accent.long():
+                if note.tone.accent:
+                    if (
+                        state.time.beat_size < note.duration
+                        and not note.tone.accent.long()
+                    ):
                         raise ValueError(
                             f"Error at beat {self._position(state.time, position)}: "
-                            f"invalid accent for a long note: {note.accent}"
+                            f"invalid accent for a long note: {note.tone.accent}"
                         )
 
-                    if not note.accent.can_follow(state.previous_accent):
+                    if not note.tone.accent.can_follow(state.previous_accent):
                         raise ValueError(
                             f"Error at beat {self._position(state.time, position)}: "
-                            f"accent {note.accent} can not follow "
+                            f"accent {note.tone.accent} can not follow "
                             f"{state.previous_accent}"
                         )
 
@@ -294,13 +297,13 @@ class Measure:
                 else:
                     pitch = state.key.in_key(pitch, accidentals.get(pitch.pitch_class))
 
-                yield Note(duration, pitch, dynamic or state.dynamic, accent)
+                yield Note(duration, Tone(pitch, dynamic or state.dynamic, accent))
 
                 if duration != note.duration:
                     yield Rest(note.duration - duration)
 
                 position += note.duration
-                state.previous_accent = note.accent
+                state.previous_accent = note.tone.accent
             else:
                 # we could catch slur-to-rest here but we can't catch
                 # them between measures or at the end of a song so we
@@ -352,12 +355,12 @@ class Part:
     def tones(
         self,
         sample_rate: int,
-    ) -> Generator[tuple[int, Tone], None, None]:
+    ) -> Generator[tuple[int, int, Tone], None, None]:
         """
         Convert a part into a series of tones.
 
-        Yields tuples containing the 0-indexed sample to start on, the
-        tone to play.
+        Yields tuples containing the 0-indexed sample to start on, the duration
+        (in samples) of the tone, and the tone to play.
 
         sample_rate: how many samples the recording will use for each second.
         """
@@ -370,6 +373,7 @@ class Part:
         )
 
         tied_index = 0
+        tied_duration = 0
         tied_tone = None
 
         samples_per_minute = sample_rate * 60
@@ -384,7 +388,7 @@ class Part:
                         tempo = state.tempo
                         samples_per_beat = round(samples_per_minute / tempo)
 
-                    samples = round(
+                    note_duration = duration = round(
                         samples_per_beat
                         * state.time.beat_size.denominator
                         * note.duration
@@ -395,22 +399,23 @@ class Part:
                             raise ValueError("Cannot slur/tie into a rest")
                     else:
                         tone = Tone(
-                            samples,
-                            note.pitch,
+                            note.tone.pitch,
                             # We know measure is supplying the dynamic
-                            cast(Dynamic, note.dynamic),
-                            note.accent,
+                            cast(Dynamic, note.tone.dynamic),
+                            note.tone.accent,
                         )
 
                         start_index = index
                         if tied_tone:
                             if tied_tone.pitch != tone.pitch:
                                 # It was a slur not a tie
-                                yield tied_index, tied_tone
+                                yield tied_index, tied_duration, tied_tone
                                 tied_tone = None
+                                tied_duration = 0
                             else:
+                                tied_duration += duration
+                                note_duration = tied_duration
                                 tone = Tone(
-                                    tied_tone.duration + tone.duration,
                                     tone.pitch,
                                     # If there's a dynamic change over a tied
                                     # note we're currently ignoring it. sorry
@@ -422,12 +427,14 @@ class Part:
                         if tone.accent == Accent.SLUR:
                             if tied_tone is None:
                                 tied_index = index
-                            tied_tone = tone
+                                tied_duration = duration
+                                tied_tone = tone
                         else:
                             tied_tone = None
-                            yield start_index, tone
+                            tied_duration = 0
+                            yield start_index, note_duration, tone
 
-                    index += samples
+                    index += duration
             except Exception:
                 # TODO: proper logging
                 print(f"Error occured at measure {measure}:")

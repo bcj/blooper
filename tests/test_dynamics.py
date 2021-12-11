@@ -116,22 +116,20 @@ def test_homogeneous():
     for symbol in ("ppp", "pp", "p", "mp", "mf", "f", "ff", "fff"):
         for accent in (None, Accent.ACCENT, Accent.SLUR):
             dynamic = Dynamic.from_symbol(symbol)
-            tone = Tone(100, Pitch(4, "A"), dynamic, accent=accent)
+            tone = Tone(Pitch(4, "A"), dynamic, accent=accent)
 
             for start in (0, 0.5, 1):
-                volumes = list(envelope.volumes(tone, 100, start))
+                volumes = list(envelope.volumes(tone, 100, 100, start))
 
                 assert volumes == 100 * [dynamics.volume(dynamic)]
 
 
 def test_adsr_rates():
     from blooper.dynamics import AttackDecaySustainRelease, DynamicRange
-    from blooper.notes import Accent, Dynamic, Tone
-    from blooper.pitch import Pitch
+    from blooper.notes import Accent, Dynamic
 
     dynamics = DynamicRange()
     forte = Dynamic.from_symbol("f")
-    pitch = Pitch(4, "A")
 
     # quick checks on automatic settings
     envelope = AttackDecaySustainRelease(dynamics, attack=0.1, decay=None, release=None)
@@ -180,7 +178,7 @@ def test_adsr_rates():
 
     # no accent, easy
     peak, sustain, end, attack_rate, decay_rate, release_rate = envelope._rates(
-        Tone(1_000, pitch, forte), 500
+        forte, None, 500
     )
     assert peak == dynamics.volume(forte)
     assert sustain == peak * 0.9
@@ -191,7 +189,7 @@ def test_adsr_rates():
 
     # different sample rate
     peak, sustain, end, attack_rate, decay_rate, release_rate = envelope._rates(
-        Tone(1_000, pitch, forte), 5_000
+        forte, None, 5_000
     )
     assert peak == dynamics.volume(forte)
     assert sustain == peak * 0.9
@@ -202,7 +200,7 @@ def test_adsr_rates():
 
     # accented, peak should be higher and rates will be quicker
     peak, sustain, end, attack_rate, decay_rate, release_rate = envelope._rates(
-        Tone(1_000, pitch, forte, Accent.ACCENT), 500
+        forte, Accent.ACCENT, 500
     )
     assert peak == dynamics.volume(Dynamic(forte.value + round(forte.step / 2)))
     assert sustain == dynamics.volume(forte) * 0.9
@@ -213,7 +211,7 @@ def test_adsr_rates():
 
     # slured. end should be sustain
     peak, sustain, end, attack_rate, decay_rate, release_rate = envelope._rates(
-        Tone(1_000, pitch, forte, Accent.SLUR), 500
+        forte, Accent.SLUR, 500
     )
     assert peak == dynamics.volume(forte)
     assert sustain == peak * 0.9
@@ -516,7 +514,7 @@ def test_adsr_volumes():
     )
 
     volumes = [
-        round(value, 14) for value in envelope.volumes(Tone(10, pitch, forte), 5)
+        round(value, 14) for value in envelope.volumes(Tone(pitch, forte), 10, 5)
     ]
     assert volumes == [0.5, 1, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0]
 

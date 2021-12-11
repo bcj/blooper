@@ -142,7 +142,7 @@ class Synthesizer(Instrument):
         index = 0
         start = 0.0
 
-        for next_index, tone in part.tones(sample_rate):
+        for next_index, duration, tone in part.tones(sample_rate):
             if index < next_index:
                 if not waves:
                     zero = (0,) * channels
@@ -186,10 +186,10 @@ class Synthesizer(Instrument):
                     )
                 )
 
-            volumes = self.envelope.volumes(tone, sample_rate, start)
+            volumes = self.envelope.volumes(tone, duration, sample_rate, start)
 
         if waves:
-            for volume in self.envelope.volumes(tone, sample_rate, start):
+            for volume in self.envelope.volumes(tone, duration, sample_rate, start):
                 yield fill_channels(sum(wave.sample() for wave in waves) * volume)
 
 
@@ -320,7 +320,7 @@ class Sampler(Instrument):
         start = 0.0
         zero = (0,) * channels
 
-        for next_index, tone in part.tones(sample_rate):
+        for next_index, duration, tone in part.tones(sample_rate):
             while index < next_index:
                 if signals:
                     for sample_sets, volume in zip(
@@ -352,7 +352,7 @@ class Sampler(Instrument):
             signals = []
             functions = []
             # Used just for keeping track of start volume
-            volumes = self.envelope.volumes(tone, sample_rate, start)
+            volumes = self.envelope.volumes(tone, duration, sample_rate, start)
 
             for pitch in tone.pitches:
                 frequency = self.tuning.pitch_to_frequency(pitch)
@@ -364,7 +364,7 @@ class Sampler(Instrument):
                     sample = choice(compatible)
                     signal = sample.load(
                         sample_rate,
-                        self.envelope.volumes(tone, sample_rate, start),
+                        self.envelope.volumes(tone, duration, sample_rate, start),
                         loop=self.loop,
                     )
                     signals.append(signal)
