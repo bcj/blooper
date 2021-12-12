@@ -1,6 +1,6 @@
 # Releases
 
-## 0.1.0-dev (YYYY-MM-DD)
+## 1.0.0 (2021-12-12)
 
 Initial working version
 
