@@ -320,3 +320,123 @@ def test_note():
     assert Note.new(eighth_note, pitch).components(
         quarter_note, tailoff_factor=Fraction(0, 1)
     ) == (eighth_note, pitch, None, None)
+
+
+def test_grace():
+    from blooper.notes import Grace, Note, Tone
+    from blooper.pitch import Chord, Pitch
+
+    for grace_pitch in (Pitch(4, "A"), Chord(Pitch(4, "A"), Pitch(3, "A"))):
+        for note_pitch in (Pitch(3, "A"), Chord(Pitch(3, "A"), Pitch(2, "A"))):
+            grace_tone = Tone(grace_pitch)
+            note_tone = Tone(note_pitch)
+
+            for note in (note_pitch, note_tone):
+                grace = Grace(grace_pitch, note)
+                assert grace.concurrence == max(
+                    grace_tone.concurrence, note_tone.concurrence
+                )
+                assert grace.count() == 1
+                for fraction in (Fraction(1, 4), Fraction(1, 2), Fraction(2, 3)):
+                    assert grace.duration(fraction) == fraction
+                    assert list(grace.notes(fraction)) == [
+                        Note(fraction / 4, grace_tone),
+                        Note(3 * fraction / 4, note_tone),
+                    ]
+
+    grace = Grace(
+        Pitch(4, "A"),
+        Note(Fraction(1, 4), Tone(Pitch(3, "B"))),
+        divisor=8,
+    )
+    assert grace.concurrence == 1
+    assert grace.count() == 1
+    for divisor in (2, 4, 8):
+        assert grace.duration(Fraction(1, divisor)) == Fraction(1, 4)
+
+    for divisor in (2, 4):
+        assert list(grace.notes(Fraction(1, divisor))) == [
+            Note(Fraction(1, 32), Tone(Pitch(4, "A"))),
+            Note(Fraction(7, 32), Tone(Pitch(3, "B"))),
+        ]
+
+    assert list(grace.notes(Fraction(1, 8))) == [
+        Note(Fraction(1, 64), Tone(Pitch(4, "A"))),
+        Note(Fraction(15, 64), Tone(Pitch(3, "B"))),
+    ]
+
+    assert Grace(Pitch(4, "A"), Pitch(4, "B")) == Grace(
+        Pitch(4, "A"), Tone(Pitch(4, "B"))
+    )
+    assert Grace(Pitch(4, "A"), Pitch(4, "B")) != Grace(
+        Pitch(4, "A"), Pitch(4, "B"), divisor=8
+    )
+    # NotImplemented test :/
+    assert Grace(Pitch(4, "A"), Pitch(4, "B")) != Pitch(4, "A")
+
+    assert repr(Grace(Pitch(4, "A"), Pitch(4, "B"))) == repr(
+        Grace(Pitch(4, "A"), Tone(Pitch(4, "B")))
+    )
+
+
+def test_tuple():
+    from blooper.notes import Grace, Note, Rest, Tone, Triplet, Tuplet
+    from blooper.pitch import Chord, Pitch
+
+    pentuplet = Tuplet(
+        Pitch(4, "A"),
+        Chord(Pitch(4, "A"), Pitch(4, "B")),
+        Tone(Pitch(4, "A")),
+        Grace(Pitch(4, "A"), Pitch(4, "A")),
+        Triplet(
+            None,
+            Pitch(4, "A"),
+            Grace(Pitch(4, "A"), Pitch(4, "A")),
+        ),
+    )
+    assert pentuplet.concurrence == 2
+    assert pentuplet.count() == 5
+    assert pentuplet.duration(Fraction(1, 4)) == Fraction(1, 4)
+    assert pentuplet.duration(Fraction(1, 8)) == Fraction(1, 8)
+
+    assert list(pentuplet.notes(Fraction(1, 4))) == [
+        Note(Fraction(1, 20), Tone(Pitch(4, "A"))),
+        Note(Fraction(1, 20), Tone(Chord(Pitch(4, "A"), Pitch(4, "B")))),
+        Note(Fraction(1, 20), Tone(Pitch(4, "A"))),
+        Note(Fraction(1, 80), Tone(Pitch(4, "A"))),
+        Note(Fraction(3, 80), Tone(Pitch(4, "A"))),
+        Rest(Fraction(1, 60)),
+        Note(Fraction(1, 60), Tone(Pitch(4, "A"))),
+        Note(Fraction(1, 240), Tone(Pitch(4, "A"))),
+        Note(Fraction(3, 240), Tone(Pitch(4, "A"))),
+    ]
+
+    assert list(pentuplet.notes(Fraction(1, 8))) == [
+        Note(Fraction(1, 40), Tone(Pitch(4, "A"))),
+        Note(Fraction(1, 40), Tone(Chord(Pitch(4, "A"), Pitch(4, "B")))),
+        Note(Fraction(1, 40), Tone(Pitch(4, "A"))),
+        Note(Fraction(1, 160), Tone(Pitch(4, "A"))),
+        Note(Fraction(3, 160), Tone(Pitch(4, "A"))),
+        Rest(Fraction(1, 120)),
+        Note(Fraction(1, 120), Tone(Pitch(4, "A"))),
+        Note(Fraction(1, 480), Tone(Pitch(4, "A"))),
+        Note(Fraction(3, 480), Tone(Pitch(4, "A"))),
+    ]
+
+    with pytest.raises(ValueError):
+        Tuplet()
+
+    with pytest.raises(ValueError):
+        Tuplet(Pitch(4, "A"))
+
+    assert Tuplet(Tone(Pitch(4, "A")), Pitch(4, "A"), Chord(Pitch(4, "A"))) == Triplet(
+        Pitch(4, "A"), Chord(Pitch(4, "A")), Tone(Pitch(4, "A"))
+    )
+    assert Tuplet(Pitch(4, "A"), Pitch(4, "A"), Pitch(4, "A")) != Tuplet(
+        Pitch(4, "A"), Pitch(4, "A"), Pitch(4, "A"), Pitch(4, "A")
+    )
+    assert Tuplet(Pitch(4, "A"), Pitch(4, "A"), Pitch(4, "A")) != Triplet(
+        Pitch(4, "A"), Pitch(4, "A"), Pitch(4, "B")
+    )
+    # NotImplemented
+    assert Tuplet(Pitch(4, "A"), Pitch(4, "A"), Pitch(4, "A")) != Pitch(4, "A")

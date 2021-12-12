@@ -5,7 +5,7 @@ from blooper.dynamics import AttackDecaySustainRelease, DynamicRange
 from blooper.instruments import Sampler, Synthesizer
 from blooper.keys import KEYS, Key
 from blooper.mixers import Mixer
-from blooper.notes import Accent, Dynamic, Note, Rest, Tone
+from blooper.notes import Accent, Dynamic, Grace, Note, Rest, Tone, Triplet, Tuplet
 from blooper.parts import COMMON_TIME, WALTZ_TIME, Measure, Part, Tempo, TimeSignature
 from blooper.pitch import (
     A440,
@@ -38,6 +38,7 @@ __all__ = (
     "Chord",
     "Dynamic",
     "DynamicRange",
+    "Grace",
     "Key",
     "Measure",
     "Mixer",
@@ -51,6 +52,8 @@ __all__ = (
     "Tempo",
     "TimeSignature",
     "Tone",
+    "Triplet",
     "Tuning",
+    "Tuplet",
     "record",
 )

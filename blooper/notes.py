@@ -5,6 +5,7 @@ including their dynamic and any (of the currently-supported) accents.
 from __future__ import annotations
 
 import re
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from fractions import Fraction
@@ -164,6 +165,10 @@ class Tone:
     accent: Optional[Accent] = None
 
     @property
+    def concurrence(self) -> int:
+        return self.pitch.concurrence
+
+    @property
     def pitches(self) -> Iterable[Pitch]:
         yield from self.pitch.pitches
 
@@ -179,7 +184,7 @@ class Note:
 
     @property
     def concurrence(self) -> int:
-        return self.tone.pitch.concurrence
+        return self.tone.concurrence
 
     def components(
         self,
@@ -244,4 +249,171 @@ class Rest:
         return 0
 
 
-__all__ = ("Accent", "Dynamic", "Note", "Rest", "Tone")
+class Notes(ABC):
+    """
+    A combination of multiple notes/rests
+    """
+
+    @property
+    @abstractmethod
+    def concurrence(self) -> int:
+        """
+        How many pitches are played at once
+        """
+
+    @abstractmethod
+    def count(self) -> int:
+        """
+        How many notes the Notes should count as
+        """
+
+    @abstractmethod
+    def duration(self, beat_size: Fraction) -> Fraction:
+        """
+        How long the notes collectively span. beat_size will be the base
+        note size of the measure.
+        """
+
+    @abstractmethod
+    def notes(self, beat_size: Fraction) -> Iterable[Note | Rest]:
+        """
+        Iterate over notes in the collection.
+        """
+
+
+class Grace(Notes):
+    """
+    A note with a grace note attached.
+    """
+
+    def __init__(
+        self, pitch: Pitch | Chord, note: Pitch | Chord | Tone | Note, divisor: int = 4
+    ):
+        """
+        pitch: The pitch of the grace note
+        note: The note to add the grace note to. If a tone is supplied
+            instead of a note, the duration of the grace + note will be
+            the beat size. This is done so that grace notes can be
+            placed on tuplets
+        divisor: grace note length will be note.duration / divisor
+
+        NOTE: If note is longer than beat_size, grace note size will be
+        based on beat size
+        """
+        self.grace_tone = Tone(pitch)
+
+        if isinstance(note, (Pitch, Chord)):
+            self.tone = Tone(note)
+            self.note = None
+        elif isinstance(note, Tone):
+            self.tone = note
+            self.note = None
+        else:
+            self.tone = note.tone
+            self.note = note
+
+        self.divisor = divisor
+
+    @property
+    def concurrence(self) -> int:
+        return max(self.grace_tone.concurrence, self.tone.concurrence)
+
+    def count(self) -> int:
+        return 1
+
+    def duration(self, beat_size: Fraction) -> Fraction:
+        return self.note.duration if self.note else beat_size
+
+    def notes(self, beat_size: Fraction) -> Iterable[Note | Rest]:
+        if self.note:
+            grace_duration = min(self.note.duration, beat_size) / self.divisor
+            note_duration = self.note.duration - grace_duration
+        else:
+            grace_duration = beat_size / self.divisor
+            note_duration = beat_size - grace_duration
+
+        yield Note(grace_duration, self.grace_tone)
+        yield Note(note_duration, self.tone)
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, Grace):
+            return (
+                self.grace_tone == other.grace_tone
+                and self.tone == other.tone
+                and self.note == other.note
+                and self.divisor == other.divisor
+            )
+
+        return NotImplemented
+
+    def __repr__(self) -> str:
+        return (
+            f"Grace({self.grace_tone!r}, "
+            f"{self.note if self.note else self.tone!r}, "
+            f"divisor={self.divisor})"
+        )
+
+
+class Tuplet(Notes):
+    """
+    A set of notes/rests that together equal the duration of a single
+    beat.
+
+    Any nested Notes will be passed the duration of a single element in
+    this tuplet as beat size (i.e., it a triplet is nested in a triplet,
+    each element the inner triplet will be 1/9th of a beat).
+    """
+
+    def __init__(self, *tones: Optional[Pitch | Chord | Tone | Notes]):
+        if len(tones) < 2:
+            raise ValueError("At least two notes are required for a tuplet")
+
+        self.tones = [
+            Tone(tone) if isinstance(tone, (Pitch, Chord)) else tone for tone in tones
+        ]
+
+    @property
+    def concurrence(self) -> int:
+        concurrence = 0
+        for tone in self.tones:
+            if tone is not None:
+                concurrence = max(concurrence, tone.concurrence)
+
+        return concurrence
+
+    def count(self) -> int:
+        return len(self.tones)
+
+    def duration(self, beat_size: Fraction) -> Fraction:
+        return beat_size
+
+    def notes(self, beat_size: Fraction) -> Iterable[Note | Rest]:
+        duration = beat_size / self.count()
+
+        for tone in self.tones:
+            if tone is None:
+                yield Rest(duration)
+            elif isinstance(tone, Tone):
+                yield Note(duration, tone)
+            else:
+                yield from tone.notes(duration)
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, Tuplet):
+            return self.tones == other.tones
+
+        return NotImplemented
+
+
+class Triplet(Tuplet):
+    def __init__(
+        self,
+        a: Optional[Pitch | Chord | Tone | Notes],
+        b: Optional[Pitch | Chord | Tone | Notes],
+        c: Optional[Pitch | Chord | Tone | Notes],
+        /,
+    ):
+        super().__init__(a, b, c)
+
+
+__all__ = ("Accent", "Dynamic", "Grace", "Note", "Rest", "Tone", "Triplet", "Tuplet")

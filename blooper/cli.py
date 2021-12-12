@@ -7,6 +7,13 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Optional
 
+# mypy doesn't seem to handle subtypes for unions that are elements in a
+# type. so we can't satisfy list[list[Note | Rest | Notes]] with
+# list[list[Note | Rest]]. Or at least it doesn't handle it at deeper
+# levels. Part actually takes list[Measure | List[Note | Rest | Notes]]
+# Why is this comment on this import and not the Notes import?
+# black and isort disagree on whether there needs to be a space between
+# the closing peren of this import and the comment. :)
 from blooper import (
     KEYS,
     Dynamic,
@@ -22,6 +29,7 @@ from blooper import (
     Tuning,
     record,
 )
+from blooper.notes import Notes
 from blooper.pitch import ARAB_SCALE, BOHLEN_PIERCE_SCALE, CHROMATIC_SCALE
 from blooper.waveforms import WAVES
 
@@ -203,7 +211,7 @@ def main(input_args: Optional[list[str]] = None):
 
     for index, pitches in enumerate(args.notes):
         total = 0
-        notes: list[Note | Rest] = []
+        notes: list[Note | Rest | Notes] = []
         for beats, pitch in pitches:
             duration = length * beats
             total += beats
@@ -220,10 +228,10 @@ def main(input_args: Optional[list[str]] = None):
                     wave=args.wave[index],
                 ),
                 Part(
+                    [notes] * args.loops[index],
                     time=TimeSignature.new(total, 4),
                     tempo=args.tempo[index],
                     dynamic=args.dynamic[index],
-                    measures=[notes] * args.loops[index],
                     key=args.key[index],
                 ),
             )

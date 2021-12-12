@@ -103,6 +103,9 @@ def test_chord():
     # Hate writing the NotImplemented part of == checks.
     assert Chord(Pitch(4, "A")) != (4, "A")
 
+    # don't really care how repr looks. just don't want it to error
+    assert "" != repr(Chord(Pitch(4, "A"), Pitch(5, "B")))
+
 
 def test_scale():
     from blooper.pitch import (

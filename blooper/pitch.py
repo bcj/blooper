@@ -244,6 +244,9 @@ class Chord:
 
         return NotImplemented
 
+    def __repr__(self) -> str:
+        return f"Chord({', '.join(repr(pitch) for pitch in self.pitches)})"
+
     # todo: new(cls, *positions: int, key: Key, scale: Scale = CHROMATIC_SCALE)
 
 

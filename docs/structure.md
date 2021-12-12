@@ -96,6 +96,26 @@ You can use `Accent.SLUR` to tie multiple notes together (put the accent on ever
 Is there an actual conceptual difference between a slur between two notes with the same pitch and a tie?
 Please let me know.
 
+##### Shorthand
+
+Blooper provides a few convenience classes for writing groups of notes that tend to be treated specially in musical scores.
+
+###### Grace Notes
+
+A `Grace` (found in `blooper.notes`) provides a quick way to write grace notes without having to manually calculate how much the grace note takes from the note it precedes.
+
+Grace takes a [pitch](#pitch)/[chord](#chord) or a [tone](#tone) for the grace note and a [note](#note--rest) for the note the grace note is associated with.
+
+###### Triplets
+
+A `Triplet` (found in `blooper.notes`) provides a quick way to write a trio of notes that each take 1/3 of a beat.
+Triplet takes three values that are each either a [pitch](#pitch)/[chord](#chord) or [tone](#tone), or `None` for a rest.
+
+A `Tuplet` (also found in `blooper.notes`) is like a triplet but splits a beat into an arbitrary number of notes (and/or rests).
+
+[Grace Notes](#grace-notes), Triplets, and Tuplets can also be nested within Triplets/Tuplets.
+See the [Rite of Spring example code](examples.md#rite) to see how this works.
+
 ## Instruments
 
 Instruments take [parts](#parts) and optionally a [tuning](#tuning) and convert them into sound waves.

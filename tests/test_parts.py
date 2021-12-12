@@ -13,7 +13,7 @@ def test_time_signature():
 
 
 def test_measure():
-    from blooper.notes import Accent, Dynamic, Note, Rest
+    from blooper.notes import Accent, Dynamic, Grace, Note, Rest
     from blooper.parts import KEYS, Key, Measure, State, Tempo, TimeSignature
     from blooper.pitch import FLAT, NATURAL, SHARP, Chord, Pitch
 
@@ -55,12 +55,24 @@ def test_measure():
         Note.new(Fraction(1, 4), Pitch(4, "A")),
         Note.new(Fraction(1, 4), Pitch(4, "B")),
     ]
+
+    # beat_size needs to be supplied if time isn't
+    with pytest.raises(ValueError):
+        measure.add(
+            Note.new(Fraction(1, 8), Pitch(4, "A")),
+            key=Key.new("A", True, flats=("A",)),
+            tempo=Tempo.LARGHETO,
+            dynamic=forte,
+            accidentals={"A": FLAT, "C": SHARP},
+        )
+
     measure.add(
         Note.new(Fraction(1, 8), Pitch(4, "A")),
         key=Key.new("A", True, flats=("A",)),
         tempo=Tempo.LARGHETO,
         dynamic=forte,
         accidentals={"A": FLAT, "C": SHARP},
+        beat_size=Fraction(1, 4),
     )
     assert measure.notes == [
         Note.new(Fraction(1, 4), Pitch(4, "A")),
@@ -72,6 +84,27 @@ def test_measure():
     assert measure.dynamics == {Fraction(1, 2): forte}
     assert measure.accidentals == {Fraction(1, 2): {"A": FLAT, "C": SHARP}}
 
+    measure = Measure(
+        [Rest(Fraction(1, 4)), Grace(Pitch(4, "A"), Pitch(3, "A"))],
+        time=TimeSignature.new(7, 8),
+    )
+    measure.add(
+        Note.new(Fraction(1, 8), Pitch(4, "A")),
+        key=Key.new("A", True, flats=("A",)),
+        tempo=Tempo.LARGHETO,
+        dynamic=forte,
+        accidentals={"A": FLAT, "C": SHARP},
+    )
+    assert measure.notes == [
+        Rest(Fraction(1, 4)),
+        Grace(Pitch(4, "A"), Pitch(3, "A")),
+        Note.new(Fraction(1, 8), Pitch(4, "A")),
+    ]
+    assert measure.keys == {Fraction(3, 8): Key.new("A", True, flats=("A",))}
+    assert measure.tempos == {Fraction(3, 8): Tempo.LARGHETO}
+    assert measure.dynamics == {Fraction(3, 8): forte}
+    assert measure.accidentals == {Fraction(3, 8): {"A": FLAT, "C": SHARP}}
+
     # position
     assert Measure._position(TimeSignature.new(4, 4), Fraction(0, 1)) == "0"
     assert Measure._position(TimeSignature.new(4, 4), Fraction(1, 4)) == "1"
@@ -81,7 +114,7 @@ def test_measure():
 
     # basic play
     notes = [
-        Note.new(Fraction(1, 4), Pitch(4, "A")),
+        Grace(Pitch(4, "G"), Note.new(Fraction(1, 4), Pitch(4, "A"))),
         Note.new(Fraction(1, 4), Pitch(4, "B"), forte),
         Note.new(Fraction(1, 8), Pitch(4, "A", SHARP)),
         Note.new(Fraction(1, 8), Pitch(4, "A")),
@@ -96,7 +129,8 @@ def test_measure():
             ),
         )
     ) == [
-        Note.new(Fraction(1, 4), Pitch(4, "A", NATURAL), mezzo_forte),
+        Note.new(Fraction(1, 16), Pitch(4, "G", NATURAL), mezzo_forte),
+        Note.new(Fraction(3, 16), Pitch(4, "A", NATURAL), mezzo_forte),
         Note.new(Fraction(1, 4), Pitch(4, "B", NATURAL), forte),
         Note.new(Fraction(1, 8), Pitch(4, "A", SHARP), mezzo_forte),
         Note.new(Fraction(1, 8), Pitch(4, "A", FLAT), mezzo_forte),
@@ -119,7 +153,8 @@ def test_measure():
             ),
         )
     ) == [
-        Note.new(Fraction(1, 4), Pitch(4, "A", FLAT), mezzo_forte),
+        Note.new(Fraction(1, 16), Pitch(4, "G", NATURAL), mezzo_forte),
+        Note.new(Fraction(3, 16), Pitch(4, "A", FLAT), mezzo_forte),
         Note.new(Fraction(1, 4), Pitch(4, "B", FLAT), forte),
         Note.new(Fraction(1, 8), Pitch(4, "A", SHARP), piano),
         Note.new(Fraction(1, 8), Pitch(4, "A", NATURAL), piano),
@@ -145,7 +180,13 @@ def test_measure():
         },
     ).play(state)
 
-    assert next(iterator).duration == Fraction(1, 4)
+    assert next(iterator).duration == Fraction(1, 16)
+    assert state.time == TimeSignature.new(3, 4)
+    assert state.tempo == 120
+    assert state.dynamic == forte
+    assert state.key == KEYS["A♭ Major"]
+
+    assert next(iterator).duration == Fraction(3, 16)
     assert state.time == TimeSignature.new(3, 4)
     assert state.tempo == 120
     assert state.dynamic == forte
@@ -172,7 +213,7 @@ def test_measure():
     # illicit changes
 
     # time too short
-    iterator = Measure(notes, time=TimeSignature.new(1, 2)).play(
+    iterator = Measure(notes, time=TimeSignature.new(2, 4)).play(
         State(
             TimeSignature.new(4, 4),
             120,
@@ -181,14 +222,17 @@ def test_measure():
             tailoff_factor=Fraction(0, 1),
         )
     )
+    next(iterator)
+    next(iterator)
+    next(iterator)
     with pytest.raises(ValueError):
         next(iterator)
 
     # before, mid-note, after-measure
     for skips, fraction in (
         (0, Fraction(-1, 2)),
-        (1, Fraction(1, 8)),
-        (4, Fraction(1, 1)),
+        (2, Fraction(1, 8)),
+        (5, Fraction(1, 1)),
     ):
         tempo_iterator = Measure(notes, tempos={fraction: 100}).play(
             State(
